@@ -1,0 +1,25 @@
+<idea-plugin>
+    <id>software.mdklatt.idea-rpython</id>
+    <name>Remote Python</name>
+    <vendor email="mdklatt@alumni.ou.edu" url="https://github.com/mdklatt/idea-ansible-plugin">Michael Klatt</vendor>
+
+    <description><![CDATA[
+      Run a remote Python application on a server, Vagrant machine, or Docker
+      container. This is <em>not</em> intended to be a full-fledged remote
+      Python interpreter, just a convenient way to run Python remotely in IDEs
+      that do not have any remote Python support. There is no code assistance,
+      debugging, or remote deployment.
+    ]]></description>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+</idea-plugin>
