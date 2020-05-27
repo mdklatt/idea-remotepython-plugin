@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>software.mdklatt.idea-rpython</id>
     <name>Remote Python</name>
-    <vendor email="mdklatt@alumni.ou.edu" url="https://github.com/mdklatt/idea-ansible-plugin">Michael Klatt</vendor>
+    <vendor email="mdklatt@alumni.ou.edu" url="https://github.com/mdklatt/idea-rpython-plugin">Michael Klatt</vendor>
 
     <description><![CDATA[
       Run a remote Python application on a server, Vagrant machine, or Docker
@@ -16,7 +16,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Add your extensions here -->
+        <configurationType implementation="software.mdklatt.idea.rpython.run.RPythonConfigurationType"/>
     </extensions>
 
     <actions>
