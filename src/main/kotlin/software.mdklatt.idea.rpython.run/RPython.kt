@@ -50,3 +50,9 @@ class RPythonConfigurationType : ConfigurationType {
             // TODO DockerConfigurationFactory(this)
         )
 }
+
+
+/**
+ * Python execution target types.
+ */
+enum class PythonTargetType { MODULE, SCRIPT }
