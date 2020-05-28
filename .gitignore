@@ -1,4 +1,9 @@
-# Ignore Gradle artifacts
+# Ignore build artifacts.
+
+build/
+
+
+# Ignore Gradle artifacts.
 
 .gradle
 
