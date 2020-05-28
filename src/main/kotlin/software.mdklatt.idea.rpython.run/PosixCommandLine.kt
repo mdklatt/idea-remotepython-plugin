@@ -11,11 +11,7 @@ import com.intellij.util.execution.ParametersListUtil
  * @param arguments: positional arguments
  * @param options: POSIX-style options
  */
-class PosixCommandLine(
-    exePath: String,
-    arguments: List<String> = emptyList(),
-    options: Map<String, Any?> = emptyMap()
-) : GeneralCommandLine() {
+class PosixCommandLine() : GeneralCommandLine() {
 
     companion object {
         /**
@@ -46,7 +42,11 @@ class PosixCommandLine(
         fun split(args: String) = ParametersListUtil.parse(args)
     }
 
-    init {
+    /**
+     *
+     */
+    internal constructor(exePath: String, arguments: List<String> = emptyList(),
+            options: Map<String, Any?> = emptyMap()): this() {
         withExePath(exePath)
         addOptions(options)
         addParameters(arguments)
