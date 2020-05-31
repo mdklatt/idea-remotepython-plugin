@@ -45,8 +45,8 @@ class RPythonConfigurationType : ConfigurationType {
      * @return the run configuration factories.
      */
     override fun getConfigurationFactories() = arrayOf<ConfigurationFactory>(
+            RemoteConfigurationFactory(this),
             VagrantConfigurationFactory(this)
-            // TODO RemoteConfigurationFactory(this)
             // TODO DockerConfigurationFactory(this)
         )
 }

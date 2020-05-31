@@ -53,6 +53,6 @@ class RPythonConfigurationTypeTest {
      */
     @Test
     fun testConfigurationFactories() {
-        // TODO: type.configurationFactories.isNotEmpty()
+        type.configurationFactories.isNotEmpty()
     }
 }
