@@ -49,10 +49,10 @@ class VagrantRunSettingsTest {
         targetParams = "-w INFO"
         python = "python3.7"
         pythonOpts = "one \"two\""
-        pythonWorkDir = "abc/"
+        remoteWorkDir = "abc/"
         vagrant = "/usr/local/bin/vagrant"
         vagrantHost = "ubuntu"
-        vagrantWorkDir = "/vagrant"
+        localWorkDir = "/vagrant"
     }
 
     /**
@@ -66,10 +66,10 @@ class VagrantRunSettingsTest {
             assertEquals("", targetParams)
             assertEquals("python3", python)
             assertEquals("", pythonOpts)
-            assertEquals("", pythonWorkDir)
+            assertEquals("", remoteWorkDir)
             assertEquals("vagrant", vagrant)
             assertEquals("", vagrantHost)
-            assertEquals("", vagrantWorkDir)
+            assertEquals("", localWorkDir)
         }
     }
 
@@ -86,10 +86,10 @@ class VagrantRunSettingsTest {
             assertEquals(targetParams, settings.targetParams)
             assertEquals(python, settings.python)
             assertEquals(pythonOpts, settings.pythonOpts)
-            assertEquals(pythonWorkDir, settings.pythonWorkDir)
+            assertEquals(remoteWorkDir, settings.remoteWorkDir)
             assertEquals(vagrant, settings.vagrant)
             assertEquals(vagrantHost, settings.vagrantHost)
-            assertEquals(vagrantWorkDir, settings.vagrantWorkDir)
+            assertEquals(localWorkDir, settings.localWorkDir)
         }
     }
 

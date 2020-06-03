@@ -21,7 +21,9 @@ import javax.swing.JTextField
 
 
 /**
- * TODO
+ * Generate VagrantRunConfigurations.
+ *
+ * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
 class VagrantConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
     /**
@@ -38,7 +40,7 @@ class VagrantConfigurationFactory(type: ConfigurationType) : ConfigurationFactor
      *
      * @return: name
      */
-    override fun getName() = "Vagrant Python"
+    override fun getName() = "Vagrant Host"
 
     /**
      * Run configuration ID used for serialization.
@@ -108,10 +110,13 @@ class VagrantRunConfiguration internal constructor(project: Project, factory: Co
 
 
 /**
- * TODO
+ * Command line process for executing the run configuration.
+ *
+ * @param config: run configuration
+ * @param environ: execution environment
  */
-class VagrantCommandLineState internal constructor(private val config: VagrantRunConfiguration, environment: ExecutionEnvironment) :
-        CommandLineState(environment) {
+class VagrantCommandLineState internal constructor(private val config: VagrantRunConfiguration, environ: ExecutionEnvironment) :
+        CommandLineState(environ) {
     /**
      * Starts the process.
      *
@@ -129,8 +134,8 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
         )
         command.addOptions(options)
         command.addParameter(settings.vagrantHost)
-        if (settings.vagrantWorkDir.isNotBlank()) {
-            command.setWorkDirectory(settings.vagrantWorkDir)
+        if (settings.localWorkDir.isNotBlank()) {
+            command.setWorkDirectory(settings.localWorkDir)
         }
         if (!command.environment.contains("TERM")) {
             command.environment["TERM"] = "xterm-256color"
@@ -143,13 +148,14 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
     /**
      * Generate the remote Python command.
      *
+     * @param settings: runtime settings
      * @return: Python command string
      */
     private fun python(settings: VagrantRunSettings): String {
         val command = PosixCommandLine().apply {
-            if (settings.pythonWorkDir.isNotBlank()) {
+            if (settings.remoteWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(listOf(settings.pythonWorkDir, "&&", settings.python))
+                addParameters(settings.remoteWorkDir, "&&", settings.python)
             }
             else {
                 withExePath(settings.python)
@@ -168,6 +174,7 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
 /**
  * UI component for Vagrant Run Configuration settings.
  *
+ * @param project: parent project
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
  */
 class VagrantSettingsEditor internal constructor(project: Project) :
@@ -190,13 +197,13 @@ class VagrantSettingsEditor internal constructor(project: Project) :
     var targetParams = RawCommandLineEditor()
     var python = JTextField()
     var pythonOpts = RawCommandLineEditor()
-    var pythonWorkDir = JTextField()
+    var remoteWorkDir = JTextField()
     var vagrant = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener("Vagrant Command", "", project,
                 FileChooserDescriptorFactory.createSingleFileDescriptor())
     }
     var vagrantHost = JTextField()
-    var vagrantWorkDir = TextFieldWithBrowseButton().apply {
+    var localWorkDir = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener("Vagrant Working Directory", "", project,
                 FileChooserDescriptorFactory.createSingleFolderDescriptor())
     }
@@ -215,13 +222,13 @@ class VagrantSettingsEditor internal constructor(project: Project) :
             }
             row("Parameters:") { targetParams() }
             titledRow("Remote Environment") {}
+            row("Vagrant host:") { vagrantHost() }
             row("Python interpreter:") { python() }
             row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { pythonWorkDir() }
+            row("Remote working directory:") { remoteWorkDir() }
             titledRow("Local Environment") {}
-            row("Vagrant host:") { vagrantHost() }
             row("Vagrant command:") { vagrant() }
-            row("Local working directory:") { vagrantWorkDir() }
+            row("Local working directory:") { localWorkDir() }
         }
     }
 
@@ -237,10 +244,10 @@ class VagrantSettingsEditor internal constructor(project: Project) :
             targetParams.text = settings.targetParams
             python.text = settings.python
             pythonOpts.text = settings.pythonOpts
-            pythonWorkDir.text = settings.pythonWorkDir
+            remoteWorkDir.text = settings.remoteWorkDir
             vagrant.text = settings.vagrant
             vagrantHost.text = settings.vagrantHost
-            vagrantWorkDir.text = settings.vagrantWorkDir
+            localWorkDir.text = settings.localWorkDir
         }
         return
     }
@@ -260,10 +267,10 @@ class VagrantSettingsEditor internal constructor(project: Project) :
             settings.targetParams = targetParams.text
             settings.python = python.text
             settings.pythonOpts = pythonOpts.text
-            settings.pythonWorkDir = pythonWorkDir.text
+            settings.remoteWorkDir = remoteWorkDir.text
             settings.vagrant = vagrant.text
             settings.vagrantHost = vagrantHost.text
-            settings.vagrantWorkDir = vagrantWorkDir.text
+            settings.localWorkDir = localWorkDir.text
         }
         return
     }
@@ -285,11 +292,11 @@ class VagrantRunSettings internal constructor() {
     var python = ""
         get() = if (field.isNotBlank()) field else "python3"
     var pythonOpts = ""
-    var pythonWorkDir = ""
+    var remoteWorkDir = ""
     var vagrant = ""
         get() = if (field.isNotBlank()) field else "vagrant"
     var vagrantHost = ""
-    var vagrantWorkDir = ""
+    var localWorkDir = ""
 
     /**
      * Construct object from a JDOM element.
@@ -303,10 +310,10 @@ class VagrantRunSettings internal constructor() {
             targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
             python = JDOMExternalizerUtil.readField(it, "python", "")
             pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
-            pythonWorkDir = JDOMExternalizerUtil.readField(it, "pythonWorkDir", "")
+            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
             vagrant = JDOMExternalizerUtil.readField(it, "vagrant", "")
             vagrantHost = JDOMExternalizerUtil.readField(it, "vagrantHost", "")
-            vagrantWorkDir = JDOMExternalizerUtil.readField(it, "vagrantWorkDir", "")
+            localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
         }
         return
     }
@@ -323,10 +330,10 @@ class VagrantRunSettings internal constructor() {
             JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
             JDOMExternalizerUtil.writeField(it, "python", python)
             JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
-            JDOMExternalizerUtil.writeField(it, "pythonWorkDir", pythonWorkDir)
+            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
             JDOMExternalizerUtil.writeField(it, "vagrant", vagrant)
             JDOMExternalizerUtil.writeField(it, "vagrantHost", vagrantHost)
-            JDOMExternalizerUtil.writeField(it, "vagrantWorkDir", vagrantWorkDir)
+            JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
         }
         return
     }
