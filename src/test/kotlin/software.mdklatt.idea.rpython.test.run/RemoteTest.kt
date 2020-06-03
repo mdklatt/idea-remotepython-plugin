@@ -49,7 +49,7 @@ class RemoteRunSettingsTest {
         targetParams = "-w INFO"
         python = "python3.7"
         pythonOpts = "one \"two\""
-        pythonWorkDir = "abc/"
+        remoteWorkDir = "abc/"
         ssh = "/bin/ssh"
         sshUser = "user"
         sshHost = "example.com"
@@ -67,7 +67,7 @@ class RemoteRunSettingsTest {
             assertEquals("", targetParams)
             assertEquals("python3", python)
             assertEquals("", pythonOpts)
-            assertEquals("", pythonWorkDir)
+            assertEquals("", remoteWorkDir)
             assertEquals("ssh", ssh)
             assertEquals("", sshUser)
             assertEquals("", sshHost)
@@ -88,7 +88,7 @@ class RemoteRunSettingsTest {
             assertEquals(targetParams, settings.targetParams)
             assertEquals(python, settings.python)
             assertEquals(pythonOpts, settings.pythonOpts)
-            assertEquals(pythonWorkDir, settings.pythonWorkDir)
+            assertEquals(remoteWorkDir, settings.remoteWorkDir)
             assertEquals(ssh, settings.ssh)
             assertEquals(sshHost, settings.sshHost)
             assertEquals(sshUser, settings.sshUser)

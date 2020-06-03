@@ -110,10 +110,13 @@ class RemoteRunConfiguration internal constructor(project: Project, factory: Con
 
 
 /**
- * TODO
+ * Command line process for executing the run configuration.
+ *
+ * @param config: run configuration
+ * @param environ: execution environment
  */
-class RemoteCommandLineState internal constructor(private val config: RemoteRunConfiguration, environment: ExecutionEnvironment) :
-        CommandLineState(environment) {
+class RemoteCommandLineState internal constructor(private val config: RemoteRunConfiguration, environ: ExecutionEnvironment) :
+        CommandLineState(environ) {
     /**
      * Starts the process.
      *
@@ -153,9 +156,9 @@ class RemoteCommandLineState internal constructor(private val config: RemoteRunC
     private fun python(settings: RemoteRunSettings): String {
         // TODO: Identical to VagrantCommandLineState except for parameter type.
         val command = PosixCommandLine().apply {
-            if (settings.pythonWorkDir.isNotBlank()) {
+            if (settings.remoteWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(settings.pythonWorkDir, "&&", settings.python)
+                addParameters(settings.remoteWorkDir, "&&", settings.python)
             }
             else {
                 withExePath(settings.python)
@@ -223,12 +226,12 @@ class RemoteSettingsEditor internal constructor(project: Project) :
             }
             row("Parameters:") { targetParams() }
             titledRow("Remote Environment") {}
+            row("Remote host:") { sshHost() }
+            row("Remote user:") { sshUser() }
             row("Python interpreter:") { python() }
             row("Python options:") { pythonOpts() }
             row("Remote working directory:") { remoteWorkDir() }
             titledRow("Local Environment") {}
-            row("Remote host:") { sshHost() }
-            row("Remote user:") { sshUser() }
             row("SSH command:") { ssh() }
             row("SSH options:") { sshOpts() }
             row("Local working directory:") { localWorkDir() }
@@ -247,7 +250,7 @@ class RemoteSettingsEditor internal constructor(project: Project) :
             targetParams.text = settings.targetParams
             python.text = settings.python
             pythonOpts.text = settings.pythonOpts
-            remoteWorkDir.text = settings.pythonWorkDir
+            remoteWorkDir.text = settings.remoteWorkDir
             ssh.text = settings.ssh
             sshHost.text = settings.sshHost
             sshUser.text = settings.sshUser
@@ -272,7 +275,7 @@ class RemoteSettingsEditor internal constructor(project: Project) :
             settings.targetParams = targetParams.text
             settings.python = python.text
             settings.pythonOpts = pythonOpts.text
-            settings.pythonWorkDir = remoteWorkDir.text
+            settings.remoteWorkDir = remoteWorkDir.text
             settings.ssh = ssh.text
             settings.sshHost = sshHost.text
             settings.sshUser = sshUser.text
@@ -299,7 +302,7 @@ class RemoteRunSettings internal constructor() {
     var python = ""
         get() = if (field.isNotBlank()) field else "python3"
     var pythonOpts = ""
-    var pythonWorkDir = ""
+    var remoteWorkDir = ""
     var ssh = ""
         get() = if (field.isNotBlank()) field else "ssh"
     var sshHost = ""
@@ -319,7 +322,7 @@ class RemoteRunSettings internal constructor() {
             targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
             python = JDOMExternalizerUtil.readField(it, "python", "")
             pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
-            pythonWorkDir = JDOMExternalizerUtil.readField(it, "pythonWorkDir", "")
+            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
             ssh = JDOMExternalizerUtil.readField(it, "ssh", "")
             sshHost = JDOMExternalizerUtil.readField(it, "sshHost", "")
             sshUser = JDOMExternalizerUtil.readField(it, "sshUser", "")
@@ -341,7 +344,7 @@ class RemoteRunSettings internal constructor() {
             JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
             JDOMExternalizerUtil.writeField(it, "python", python)
             JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
-            JDOMExternalizerUtil.writeField(it, "pythonWorkDir", pythonWorkDir)
+            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
             JDOMExternalizerUtil.writeField(it, "ssh", ssh)
             JDOMExternalizerUtil.writeField(it, "sshHost", sshHost)
             JDOMExternalizerUtil.writeField(it, "sshUser", sshUser)
