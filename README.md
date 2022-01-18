@@ -1,18 +1,13 @@
-# Ansible Plugin
+# Remote Python Plugin
 
-[![Build](https://api.travis-ci.com/mdklatt/idea-rpython-plugin.svg)][travis:build]
+[![Build](https://github.com/mdklatt/idea-rpython-plugin/actions/workflows/build.yml/badge.svg)](https://github.com/mdklatt/idea-rpython-plugin/actions/workflows/build.yml)
+
 
 <!-- Plugin description -->
 
 **Remote Python Plugin** adds Run Configurations for running remote Python interpreters to a
 [JetBrains][jetbrains] IDE like CLion.
 
-
-[ansible:docs]: https://docs.ansible.com/ansible/latest/index.html
-[ansible:logo]: https://www.ansible.com/logos
 [jetbrains]: https://www.jetbrains.com
 
 <!-- Plugin description end -->
-
-
-[travis:build]: https://travis-ci.com/mdklatt/idea-rpython-plugin
