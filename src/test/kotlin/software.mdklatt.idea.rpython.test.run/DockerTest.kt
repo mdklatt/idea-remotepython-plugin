@@ -42,16 +42,16 @@ class DockerRunSettingsTest {
 
     private var settings = DockerRunSettings().apply {
         targetType = PythonTargetType.MODULE
-        target = "pymod"
+        targetName = "pymod"
         targetParams = "-w INFO"
-        python = "python3.7"
+        pythonExe = "python3.7"
         pythonOpts = "one \"two\""
         remoteWorkDir = "abc/"
-        docker = "/usr/local/bin/docker"
+        dockerExe = "/usr/local/bin/docker"
         dockerOpts = "one \"two\""
         dockerCompose = "docker-compose.yml"
-        dockerHost = "ubuntu:20.04"
-        dockerHostType = DockerHostType.IMAGE
+        hostName = "ubuntu:20.04"
+        hostType = DockerHostType.IMAGE
         localWorkDir = "/home/ubuntu"
     }
 
@@ -62,16 +62,16 @@ class DockerRunSettingsTest {
     fun testCtor() {
         DockerRunSettings().apply {
             assertEquals(PythonTargetType.SCRIPT, targetType)
-            assertEquals("", target)
+            assertEquals("", targetName)
             assertEquals("", targetParams)
-            assertEquals("python3", python)
+            assertEquals("python3", pythonExe)
             assertEquals("", pythonOpts)
             assertEquals("", remoteWorkDir)
-            assertEquals("docker", docker)
+            assertEquals("docker", dockerExe)
             assertEquals("", dockerOpts)
             assertEquals("", dockerCompose)
-            assertEquals("", dockerHost)
-            assertEquals(DockerHostType.IMAGE, dockerHostType)
+            assertEquals("", hostName)
+            assertEquals(DockerHostType.IMAGE, hostType)
             assertEquals("", localWorkDir)
         }
     }
@@ -85,16 +85,16 @@ class DockerRunSettingsTest {
         settings.write(element)
         DockerRunSettings(element).apply {
             assertEquals(targetType, settings.targetType)
-            assertEquals(target, settings.target)
+            assertEquals(targetName, settings.targetName)
             assertEquals(targetParams, settings.targetParams)
-            assertEquals(python, settings.python)
+            assertEquals(pythonExe, settings.pythonExe)
             assertEquals(pythonOpts, settings.pythonOpts)
             assertEquals(remoteWorkDir, settings.remoteWorkDir)
-            assertEquals(docker, settings.docker)
+            assertEquals(dockerExe, settings.dockerExe)
             assertEquals(dockerOpts, settings.dockerOpts)
             assertEquals(dockerCompose, settings.dockerCompose)
-            assertEquals(dockerHost, settings.dockerHost)
-            assertEquals(dockerHostType, settings.dockerHostType)
+            assertEquals(hostName, settings.hostName)
+            assertEquals(hostType, settings.hostType)
             assertEquals(localWorkDir, settings.localWorkDir)
         }
     }
@@ -105,10 +105,10 @@ class DockerRunSettingsTest {
     @Test
     fun testPython() {
         DockerRunSettings().apply {
-            python = ""
-            assertEquals("python3", python)
-            python = "abc"
-            assertEquals("abc", python)
+            pythonExe = ""
+            assertEquals("python3", pythonExe)
+            pythonExe = "abc"
+            assertEquals("abc", pythonExe)
         }
     }
 
@@ -118,10 +118,10 @@ class DockerRunSettingsTest {
     @Test
     fun testDocker() {
         DockerRunSettings().apply {
-            docker = ""
-            assertEquals("docker", docker)
-            docker = "abc"
-            assertEquals("abc", docker)
+            dockerExe = ""
+            assertEquals("docker", dockerExe)
+            dockerExe = "abc"
+            assertEquals("abc", dockerExe)
         }
     }
 }

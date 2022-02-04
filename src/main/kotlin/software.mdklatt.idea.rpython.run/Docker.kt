@@ -62,7 +62,7 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
 class DockerRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
         RunConfigurationBase<RunProfileState>(project, factory, name) {
 
-    var settings = DockerRunSettings()
+    internal var settings = DockerRunSettings()
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -115,7 +115,7 @@ class DockerRunConfiguration internal constructor(project: Project, factory: Con
 /**
  * Docker host type.
  */
-enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
+internal enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
 
 
 /**
@@ -142,8 +142,8 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
             "rm" to true,
             "entrypoint" to ""
         )
-        val command = PosixCommandLine(settings.docker)
-        when (settings.dockerHostType) {
+        val command = PosixCommandLine(settings.dockerExe)
+        when (settings.hostType) {
             DockerHostType.CONTAINER -> {
                 command.addParameter("exec")
             }
@@ -160,7 +160,7 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
                 command.addOptions(runOptions)
             }
         }
-        command.addParameters(settings.dockerHost, *python(settings))
+        command.addParameters(settings.hostName, *python(settings))
         if (settings.localWorkDir.isNotBlank()) {
             command.setWorkDirectory(settings.localWorkDir)
         }
@@ -180,11 +180,11 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
      */
     private fun python(settings: DockerRunSettings): Array<String> {
         val command = PosixCommandLine().apply {
-            withExePath(settings.python)
+            withExePath(settings.pythonExe)
             if (settings.targetType == PythonTargetType.MODULE) {
                 addParameter("-m")
             }
-            addParameter(settings.target)
+            addParameter(settings.targetName)
             addParameters(PosixCommandLine.split(settings.targetParams))
         }
         return PosixCommandLine.split(command.commandLineString).toTypedArray()
@@ -281,17 +281,17 @@ class DockerSettingsEditor internal constructor(project: Project) :
      */
     override fun resetEditorFrom(config: DockerRunConfiguration) {
         config.apply {
-            target.text = settings.target
+            target.text = settings.targetName
             targetType.selectedIndex = targetTypes.map{ it.first }.indexOf(settings.targetType)
             targetParams.text = settings.targetParams
-            python.text = settings.python
+            python.text = settings.pythonExe
             pythonOpts.text = settings.pythonOpts
             remoteWorkDir.text = settings.remoteWorkDir
-            docker.text = settings.docker
+            docker.text = settings.dockerExe
             dockerCompose.text = settings.dockerCompose
             dockerOpts.text = settings.dockerOpts
-            dockerHost.text = settings.dockerHost
-            dockerHostType.selectedIndex = dockerHostTypes.map{ it.first }.indexOf(settings.dockerHostType)
+            dockerHost.text = settings.hostName
+            dockerHostType.selectedIndex = dockerHostTypes.map{ it.first }.indexOf(settings.hostType)
             localWorkDir.text = settings.localWorkDir
         }
         return
@@ -307,17 +307,17 @@ class DockerSettingsEditor internal constructor(project: Project) :
         // critical.
         config.apply {
             settings = DockerRunSettings()
-            settings.target = target.text
+            settings.targetName = target.text
             settings.targetType = targetTypes[targetType.selectedIndex].first
             settings.targetParams = targetParams.text
-            settings.python = python.text
+            settings.pythonExe = python.text
             settings.pythonOpts = pythonOpts.text
             settings.remoteWorkDir = remoteWorkDir.text
-            settings.docker = docker.text
+            settings.dockerExe = docker.text
             settings.dockerCompose = dockerCompose.text
             settings.dockerOpts = dockerOpts.text
-            settings.dockerHost = dockerHost.text
-            settings.dockerHostType = dockerHostTypes[dockerHostType.selectedIndex].first
+            settings.hostName = dockerHost.text
+            settings.hostType = dockerHostTypes[dockerHostType.selectedIndex].first
             settings.localWorkDir = localWorkDir.text
         }
         return
@@ -328,25 +328,25 @@ class DockerSettingsEditor internal constructor(project: Project) :
 /**
  * Manage DockerRunConfiguration runtime settings.
  */
-class DockerRunSettings internal constructor() {
+internal class DockerRunSettings internal constructor() {
 
     companion object {
         private const val JDOM_TAG = "python-docker"
     }
 
-    var target = ""
+    var targetName = ""
     var targetType = PythonTargetType.SCRIPT
     var targetParams = ""
-    var python = ""
+    var pythonExe = ""
         get() = if (field.isNotBlank()) field else "python3"
     var pythonOpts = ""
     var remoteWorkDir = ""
-    var docker = ""
+    var dockerExe = ""
         get() = if (field.isNotBlank()) field else "docker"
     var dockerOpts = ""
     var dockerCompose = ""
-    var dockerHost = ""
-    var dockerHostType = DockerHostType.IMAGE
+    var hostName = ""
+    var hostType = DockerHostType.IMAGE
     var localWorkDir = ""
 
     /**
@@ -356,17 +356,17 @@ class DockerRunSettings internal constructor() {
      */
     internal constructor(element: Element) : this() {
         element.getOrCreate(JDOM_TAG).let {
-            target = JDOMExternalizerUtil.readField(it, "target", "")
+            targetName = JDOMExternalizerUtil.readField(it, "targetName", "")
             targetType = PythonTargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
             targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
-            python = JDOMExternalizerUtil.readField(it, "python", "")
+            pythonExe = JDOMExternalizerUtil.readField(it, "pythonExe", "")
             pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
             remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
-            docker = JDOMExternalizerUtil.readField(it, "docker", "")
+            dockerExe = JDOMExternalizerUtil.readField(it, "dockerExe", "")
             dockerOpts = JDOMExternalizerUtil.readField(it, "dockerOpts", "")
             dockerCompose = JDOMExternalizerUtil.readField(it, "dockerCompose", "")
-            dockerHost = JDOMExternalizerUtil.readField(it, "dockerHost", "")
-            dockerHostType = DockerHostType.valueOf(JDOMExternalizerUtil.readField(it, "dockerHostType", "IMAGE"))
+            hostName = JDOMExternalizerUtil.readField(it, "hostName", "")
+            hostType = DockerHostType.valueOf(JDOMExternalizerUtil.readField(it, "hostType", "IMAGE"))
             localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
         }
         return
@@ -379,17 +379,17 @@ class DockerRunSettings internal constructor() {
      */
     fun write(element: Element) {
         element.getOrCreate(JDOM_TAG).let {
-            JDOMExternalizerUtil.writeField(it, "target", target)
+            JDOMExternalizerUtil.writeField(it, "targetName", targetName)
             JDOMExternalizerUtil.writeField(it, "targetType", targetType.name)
             JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
-            JDOMExternalizerUtil.writeField(it, "python", python)
+            JDOMExternalizerUtil.writeField(it, "pythonExe", pythonExe)
             JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
             JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
-            JDOMExternalizerUtil.writeField(it, "docker", docker)
+            JDOMExternalizerUtil.writeField(it, "dockerExe", dockerExe)
             JDOMExternalizerUtil.writeField(it, "dockerOpts", dockerOpts)
             JDOMExternalizerUtil.writeField(it, "dockerCompose", dockerCompose)
-            JDOMExternalizerUtil.writeField(it, "dockerHost", dockerHost)
-            JDOMExternalizerUtil.writeField(it, "dockerHostType", dockerHostType.name)
+            JDOMExternalizerUtil.writeField(it, "hostName", hostName)
+            JDOMExternalizerUtil.writeField(it, "hostType", hostType.name)
             JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
         }
         return
