@@ -21,11 +21,11 @@ import org.jdom.Element
 
 
 /**
- * Generate RemoteRunConfigurations.
+ * Generate SecureShellRunConfigurations.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class RemoteConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
+class SecureShellConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
@@ -33,14 +33,14 @@ class RemoteConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
      * @return the run configuration instance.
      */
     override fun createTemplateConfiguration(project: Project) =
-            RemoteRunConfiguration(project, this, "")
+            SecureShellRunConfiguration(project, this, "")
 
     /**
      * The name of the run configuration variant created by this factory.
      *
      * @return: name
      */
-    override fun getName() = "Remote Host"
+    override fun getName() = "SSH Host"
 
     /**
      * Run configuration ID used for serialization.
@@ -56,10 +56,10 @@ class RemoteConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class RemoteRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
+class SecureShellRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
         RunConfigurationBase<RunProfileState>(project, factory, name) {
 
-    var settings = RemoteRunSettings()
+    var settings = SecureShellRunSettings()
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -69,7 +69,7 @@ class RemoteRunConfiguration internal constructor(project: Project, factory: Con
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = RemoteSettingsEditor(project)
+    override fun getConfigurationEditor() = SecureShellSettingsEditor(project)
 
     /**
      * Prepares for executing a specific instance of the run configuration.
@@ -79,7 +79,7 @@ class RemoteRunConfiguration internal constructor(project: Project, factory: Con
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
     override fun getState(executor: Executor, environment: ExecutionEnvironment) =
-            RemoteCommandLineState(this, environment)
+            SecureShellCommandLineState(this, environment)
 
     /**
      * Read settings from a JDOM element.
@@ -90,7 +90,7 @@ class RemoteRunConfiguration internal constructor(project: Project, factory: Con
      */
     override fun readExternal(element: Element) {
         super.readExternal(element)
-        settings = RemoteRunSettings(element)
+        settings = SecureShellRunSettings(element)
         return
     }
 
@@ -115,7 +115,7 @@ class RemoteRunConfiguration internal constructor(project: Project, factory: Con
  * @param config: run configuration
  * @param environ: execution environment
  */
-class RemoteCommandLineState internal constructor(private val config: RemoteRunConfiguration, environ: ExecutionEnvironment) :
+class SecureShellCommandLineState internal constructor(private val config: SecureShellRunConfiguration, environ: ExecutionEnvironment) :
         CommandLineState(environ) {
     /**
      * Starts the process.
@@ -153,7 +153,7 @@ class RemoteCommandLineState internal constructor(private val config: RemoteRunC
      *
      * @return: Python command string
      */
-    private fun python(settings: RemoteRunSettings): String {
+    private fun python(settings: SecureShellRunSettings): String {
         // TODO: Identical to VagrantCommandLineState except for parameter type.
         val command = PosixCommandLine().apply {
             if (settings.remoteWorkDir.isNotBlank()) {
@@ -175,18 +175,18 @@ class RemoteCommandLineState internal constructor(private val config: RemoteRunC
 
 
 /**
- * UI component for Remote Run Configuration settings.
+ * UI component for SSH Run Configuration settings.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
  */
-class RemoteSettingsEditor internal constructor(project: Project) :
-        SettingsEditor<RemoteRunConfiguration>() {
+class SecureShellSettingsEditor internal constructor(project: Project) :
+        SettingsEditor<SecureShellRunConfiguration>() {
 
     companion object {
         // Ordering of targetTypeLabels and targetTypeValues must agree.
         private val targetTypeLabels = arrayOf(
             "Script path:",
-            "Module name:"
+            "Module name:",
         )
         private val targetTypeValues = arrayOf(
             PythonTargetType.SCRIPT,
@@ -243,7 +243,7 @@ class RemoteSettingsEditor internal constructor(project: Project) :
      *
      * @param config: run configuration
      */
-    override fun resetEditorFrom(config: RemoteRunConfiguration) {
+    override fun resetEditorFrom(config: SecureShellRunConfiguration) {
         config.apply {
             target.text = settings.target
             targetType.selectedIndex = targetTypeValues.indexOf(settings.targetType)
@@ -265,11 +265,11 @@ class RemoteSettingsEditor internal constructor(project: Project) :
      *
      * @param config: run configuration
      */
-    override fun applyEditorTo(config: RemoteRunConfiguration) {
+    override fun applyEditorTo(config: SecureShellRunConfiguration) {
         // This apparently gets called for every key press, so performance is
         // critical.
         config.apply {
-            settings = RemoteRunSettings()
+            settings = SecureShellRunSettings()
             settings.target = target.text
             settings.targetType = targetTypeValues[targetType.selectedIndex]
             settings.targetParams = targetParams.text
@@ -288,12 +288,12 @@ class RemoteSettingsEditor internal constructor(project: Project) :
 
 
 /**
- * Manage RemoteRunConfiguration runtime settings.
+ * Manage SecureShellRunConfiguration runtime settings.
  */
-class RemoteRunSettings internal constructor() {
+class SecureShellRunSettings internal constructor() {
 
     companion object {
-        private const val JDOM_TAG = "python-remote"
+        private const val JDOM_TAG = "python-ssh"
     }
 
     var target = ""

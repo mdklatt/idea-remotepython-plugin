@@ -45,7 +45,7 @@ class RemotePythonConfigurationType : ConfigurationType {
      * @return the run configuration factories.
      */
     override fun getConfigurationFactories() = arrayOf<ConfigurationFactory>(
-        RemoteConfigurationFactory(this),
+        SecureShellConfigurationFactory(this),
         VagrantConfigurationFactory(this),
         DockerConfigurationFactory(this),
     )

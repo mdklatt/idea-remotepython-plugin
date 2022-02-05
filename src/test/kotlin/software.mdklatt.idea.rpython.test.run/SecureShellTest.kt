@@ -9,16 +9,16 @@ import org.jdom.Element
 import org.junit.jupiter.api.Test
 import software.mdklatt.idea.rpython.run.RemotePythonConfigurationType
 import software.mdklatt.idea.rpython.run.PythonTargetType
-import software.mdklatt.idea.rpython.run.RemoteConfigurationFactory
-import software.mdklatt.idea.rpython.run.RemoteRunSettings
+import software.mdklatt.idea.rpython.run.SecureShellConfigurationFactory
+import software.mdklatt.idea.rpython.run.SecureShellRunSettings
 
 
 /**
  * Unit tests for the RemoteConfigurationFactory class.
  */
-class RemoteConfigurationFactoryTest {
+class SecureShellConfigurationFactoryTest {
 
-    private val factory = RemoteConfigurationFactory(RemotePythonConfigurationType())
+    private val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
 
     /**
      * Test the id property.
@@ -41,9 +41,9 @@ class RemoteConfigurationFactoryTest {
 /**
  * Unit tests for the RemoteRunSettings class.
  */
-class RemoteRunSettingsTest {
+class SecureShellRunSettingsTest {
 
-    private var settings = RemoteRunSettings().apply {
+    private var settings = SecureShellRunSettings().apply {
         targetType = PythonTargetType.MODULE
         target = "pymod"
         targetParams = "-w INFO"
@@ -61,7 +61,7 @@ class RemoteRunSettingsTest {
      */
     @Test
     fun testCtor() {
-        RemoteRunSettings().apply {
+        SecureShellRunSettings().apply {
             assertEquals(PythonTargetType.SCRIPT, targetType)
             assertEquals("", target)
             assertEquals("", targetParams)
@@ -82,7 +82,7 @@ class RemoteRunSettingsTest {
     fun testJdomElement() {
         val element = Element("configuration")
         settings.write(element)
-        RemoteRunSettings(element).apply {
+        SecureShellRunSettings(element).apply {
             assertEquals(targetType, settings.targetType)
             assertEquals(target, settings.target)
             assertEquals(targetParams, settings.targetParams)
@@ -101,7 +101,7 @@ class RemoteRunSettingsTest {
      */
     @Test
     fun testPython() {
-        RemoteRunSettings().apply {
+        SecureShellRunSettings().apply {
             python = ""
             assertEquals("python3", python)
             python = "abc"
@@ -114,7 +114,7 @@ class RemoteRunSettingsTest {
      */
     @Test
     fun testSsh() {
-        RemoteRunSettings().apply {
+        SecureShellRunSettings().apply {
             ssh = ""
             assertEquals("ssh", ssh)
             ssh = "abc"
