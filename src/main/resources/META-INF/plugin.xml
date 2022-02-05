@@ -16,7 +16,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <configurationType implementation="software.mdklatt.idea.rpython.run.RPythonConfigurationType"/>
+        <configurationType implementation="software.mdklatt.idea.rpython.run.RemotePythonConfigurationType"/>
     </extensions>
 
     <actions>

@@ -15,7 +15,7 @@ import software.mdklatt.idea.rpython.run.*
  */
 class DockerConfigurationFactoryTest {
 
-    private val factory = DockerConfigurationFactory(RPythonConfigurationType())
+    private val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
 
     /**
      * Test the id property.

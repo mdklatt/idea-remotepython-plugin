@@ -7,7 +7,7 @@ import com.intellij.icons.AllIcons
 /**
  * TODO
  */
-class RPythonConfigurationType : ConfigurationType {
+class RemotePythonConfigurationType : ConfigurationType {
     /**
      * The ID of the configuration type. Should be camel-cased without dashes, underscores, spaces and quotation marks.
      * The ID is used to store run configuration settings in a project or workspace file and

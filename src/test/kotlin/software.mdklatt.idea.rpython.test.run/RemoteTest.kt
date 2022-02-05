@@ -7,7 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.jdom.Element
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.rpython.run.RPythonConfigurationType
+import software.mdklatt.idea.rpython.run.RemotePythonConfigurationType
 import software.mdklatt.idea.rpython.run.PythonTargetType
 import software.mdklatt.idea.rpython.run.RemoteConfigurationFactory
 import software.mdklatt.idea.rpython.run.RemoteRunSettings
@@ -18,7 +18,7 @@ import software.mdklatt.idea.rpython.run.RemoteRunSettings
  */
 class RemoteConfigurationFactoryTest {
 
-    private val factory = RemoteConfigurationFactory(RPythonConfigurationType())
+    private val factory = RemoteConfigurationFactory(RemotePythonConfigurationType())
 
     /**
      * Test the id property.

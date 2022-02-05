@@ -5,16 +5,16 @@ package software.mdklatt.idea.rpython.test.run
 
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.rpython.run.RPythonConfigurationType
+import software.mdklatt.idea.rpython.run.RemotePythonConfigurationType
 import kotlin.test.assertNotNull
 
 
 /**
  * Unit tests for the PythonConfigurationType class.
  */
-class RPythonConfigurationTypeTest {
+class RemotePythonConfigurationTypeTest {
 
-    private var type = RPythonConfigurationType()
+    private var type = RemotePythonConfigurationType()
 
     /**
      * Test the id property.
