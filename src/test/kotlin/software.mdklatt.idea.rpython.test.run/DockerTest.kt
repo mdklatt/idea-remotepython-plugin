@@ -147,3 +147,57 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
         assertTrue(factory.name.isNotBlank())
     }
 }
+
+
+/**
+ * Unit tests for the DockerRunConfiguration class.
+ */
+internal class DockerRunConfigurationTest : BasePlatformTestCase() {
+
+    private lateinit var config: DockerRunConfiguration
+    private lateinit var element: Element
+
+    /**
+     * Per-test initialization.
+     */
+    override fun setUp() {
+        super.setUp()
+        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        config = DockerRunConfiguration(project, factory, "Docker Python Test")
+        element = Element("configuration")
+        element.getOrCreate(config.settings.xmlTagName).let {
+            JDOMExternalizerUtil.writeField(it, "targetName", "script.py")
+            JDOMExternalizerUtil.writeField(it, "pythonExe", "python")
+        }
+    }
+
+    /**
+     * Test the primary constructor.
+     */
+    fun testConstructor() {
+        assertEquals("Docker Python Test", config.name)
+    }
+
+    /**
+     * Test the readExternal() method.
+     */
+    fun testReadExternal() {
+        config.apply {
+            readExternal(element)
+            assertEquals("script.py", settings.targetName)
+            assertEquals("python", settings.pythonExe)
+            assertEquals("", settings.pythonOpts)
+            assertEquals(DockerHostType.IMAGE, settings.hostType)
+        }
+    }
+
+    /**
+     * Test the writeExternal() method.
+     */
+    fun testWriteExternal() {
+        config.writeExternal(element)
+        element.getOrCreate(config.settings.xmlTagName).let {
+            assertTrue(JDOMExternalizerUtil.readField(it, "id", "").isNotEmpty())
+        }
+    }
+}
