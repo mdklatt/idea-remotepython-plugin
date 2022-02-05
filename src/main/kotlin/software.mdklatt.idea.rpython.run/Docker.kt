@@ -24,7 +24,7 @@ import javax.swing.JTextField
 
 
 /**
- * Generate DockerRunConfigurations.
+ * Create a DockerRunConfiguration instance.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
@@ -62,7 +62,7 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
 class DockerRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
         RunConfigurationBase<RunProfileState>(project, factory, name) {
 
-    internal var settings = DockerRunSettings()
+    internal var settings = DockerSettings()
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -85,7 +85,7 @@ class DockerRunConfiguration internal constructor(project: Project, factory: Con
             DockerCommandLineState(this, environment)
 
     /**
-     * Read settings from a JDOM element.
+     * Read settings from an XML element.
      *
      * This is part of the RunConfiguration persistence API.
      *
@@ -93,12 +93,12 @@ class DockerRunConfiguration internal constructor(project: Project, factory: Con
      */
     override fun readExternal(element: Element) {
         super.readExternal(element)
-        settings = DockerRunSettings(element)
+        settings.load(element)
         return
     }
 
     /**
-     * Write settings to a JDOM element.
+     * Write settings to an XML element.
      *
      * This is part of the RunConfiguration persistence API.
 
@@ -106,7 +106,7 @@ class DockerRunConfiguration internal constructor(project: Project, factory: Con
      */
     override fun writeExternal(element: Element) {
         super.writeExternal(element)
-        settings.write(element)
+        settings.save(element)
         return
     }
 }
@@ -178,7 +178,7 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
      * @param settings: runtime settings
      * @return: Python command string
      */
-    private fun python(settings: DockerRunSettings): Array<String> {
+    private fun python(settings: DockerSettings): Array<String> {
         val command = PosixCommandLine().apply {
             withExePath(settings.pythonExe)
             if (settings.targetType == PythonTargetType.MODULE) {
@@ -306,7 +306,7 @@ class DockerSettingsEditor internal constructor(project: Project) :
         // This apparently gets called for every key press, so performance is
         // critical.
         config.apply {
-            settings = DockerRunSettings()
+            settings = DockerSettings()
             settings.targetName = target.text
             settings.targetType = targetTypes[targetType.selectedIndex].first
             settings.targetParams = targetParams.text
@@ -328,69 +328,47 @@ class DockerSettingsEditor internal constructor(project: Project) :
 /**
  * Manage DockerRunConfiguration runtime settings.
  */
-internal class DockerRunSettings internal constructor() {
+internal class DockerSettings : RemotePythonSettings() {
 
-    companion object {
-        private const val JDOM_TAG = "python-docker"
-    }
+    override val xmlTagName = "ansible-playbook"
 
-    var targetName = ""
-    var targetType = PythonTargetType.SCRIPT
-    var targetParams = ""
-    var pythonExe = ""
-        get() = if (field.isNotBlank()) field else "python3"
-    var pythonOpts = ""
-    var remoteWorkDir = ""
     var dockerExe = ""
-        get() = if (field.isNotBlank()) field else "docker"
+        get() = field.ifBlank { "docker" }
     var dockerOpts = ""
     var dockerCompose = ""
     var hostName = ""
     var hostType = DockerHostType.IMAGE
-    var localWorkDir = ""
 
     /**
-     * Construct object from a JDOM element.
+     * Load stored settings.
      *
-     * @param element: input element
+     * @param element: settings root element
      */
-    internal constructor(element: Element) : this() {
-        element.getOrCreate(JDOM_TAG).let {
-            targetName = JDOMExternalizerUtil.readField(it, "targetName", "")
-            targetType = PythonTargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
-            targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
-            pythonExe = JDOMExternalizerUtil.readField(it, "pythonExe", "")
-            pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
-            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
+    internal override fun load(element: Element) {
+        super.load(element)
+        element.getOrCreate(xmlTagName).let {
             dockerExe = JDOMExternalizerUtil.readField(it, "dockerExe", "")
             dockerOpts = JDOMExternalizerUtil.readField(it, "dockerOpts", "")
             dockerCompose = JDOMExternalizerUtil.readField(it, "dockerCompose", "")
             hostName = JDOMExternalizerUtil.readField(it, "hostName", "")
             hostType = DockerHostType.valueOf(JDOMExternalizerUtil.readField(it, "hostType", "IMAGE"))
-            localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
         }
         return
     }
 
     /**
-     * Write settings to a JDOM element.
+     * Save settings.
      *
-     * @param element: output element
+     * @param element: settings root element
      */
-    fun write(element: Element) {
-        element.getOrCreate(JDOM_TAG).let {
-            JDOMExternalizerUtil.writeField(it, "targetName", targetName)
-            JDOMExternalizerUtil.writeField(it, "targetType", targetType.name)
-            JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
-            JDOMExternalizerUtil.writeField(it, "pythonExe", pythonExe)
-            JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
-            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
+    internal override fun save(element: Element) {
+        super.save(element)
+        element.getOrCreate(xmlTagName).let {
             JDOMExternalizerUtil.writeField(it, "dockerExe", dockerExe)
             JDOMExternalizerUtil.writeField(it, "dockerOpts", dockerOpts)
             JDOMExternalizerUtil.writeField(it, "dockerCompose", dockerCompose)
             JDOMExternalizerUtil.writeField(it, "hostName", hostName)
             JDOMExternalizerUtil.writeField(it, "hostType", hostType.name)
-            JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
         }
         return
     }
