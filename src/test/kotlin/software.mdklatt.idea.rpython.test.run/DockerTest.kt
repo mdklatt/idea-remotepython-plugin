@@ -201,3 +201,30 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
         }
     }
 }
+
+
+/**
+ * Unit tests for the DockerSettingsEditor class.
+ */
+internal class DockerSettingsEditorTest : BasePlatformTestCase() {
+    /**
+     * Test the primary constructor.
+     */
+    fun testConstructor() {
+        DockerSettingsEditor(project).apply {
+            assertEquals(0, targetType.selectedIndex)
+            assertTrue(targetName.text.isBlank())
+            assertTrue(pythonExe.text.isBlank())
+            assertTrue(pythonOpts.text.isBlank())
+            assertTrue(remoteWorkDir.text.isBlank())
+            assertEquals(0, hostType.selectedIndex)
+            assertTrue(hostName.text.isBlank())
+            assertTrue(localWorkDir.text.isBlank())
+            assertTrue(dockerExe.text.isBlank())
+            assertTrue(dockerCompose.text.isBlank())
+            assertFalse(dockerCompose.isEditable)
+            assertTrue(dockerOpts.text.isBlank())
+            assertTrue(localWorkDir.text.isBlank())
+        }
+    }
+}

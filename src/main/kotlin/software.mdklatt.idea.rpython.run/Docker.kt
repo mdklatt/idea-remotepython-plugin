@@ -206,33 +206,32 @@ class DockerSettingsEditor internal constructor(project: Project) :
             Pair(PythonTargetType.SCRIPT, "Script path:"),
             Pair(PythonTargetType.MODULE, "Module name:"),
         )
-        private val dockerHostTypes = listOf(
+        private val hostTypes = listOf(
             Pair(DockerHostType.IMAGE, "Image name:"),
             Pair(DockerHostType.CONTAINER, "Container name:"),
             Pair(DockerHostType.SERVICE, "Service name:"),
         )
+        private val fileChooser = FileChooserDescriptorFactory.createSingleFileDescriptor()
     }
 
-    var target = JTextField()
+    var targetName = JTextField()
     var targetType = ComboBox(targetTypes.map{ it.second }.toTypedArray())
     var targetParams = RawCommandLineEditor()
-    var python = JTextField()
+    var pythonExe = JTextField()
     var pythonOpts = RawCommandLineEditor()
     var remoteWorkDir = JTextField()
-    var dockerHost = JTextField()
-    var dockerHostType = ComboBox(dockerHostTypes.map{ it.second }.toTypedArray())
-    var docker = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Docker Command", "", project,
-                FileChooserDescriptorFactory.createSingleFileDescriptor())
-    }
-    var dockerCompose = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Docker Compose File", "", project,
-            FileChooserDescriptorFactory.createSingleFileDescriptor())
+    var hostName = JTextField()
+    var hostType = ComboBox(hostTypes.map{ it.second }.toTypedArray())
+    var dockerExe = TextFieldWithBrowseButton().apply {
+        addBrowseFolderListener("Docker Command", "", project, fileChooser)
     }
     var dockerOpts = RawCommandLineEditor()
+    var dockerCompose = TextFieldWithBrowseButton().apply {
+        isEditable = false
+        addBrowseFolderListener("Docker Compose File", "", project, fileChooser)
+    }
     var localWorkDir = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Docker Working Directory", "", project,
-                FileChooserDescriptorFactory.createSingleFolderDescriptor())
+        addBrowseFolderListener("Docker Working Directory", "", project, fileChooser)
     }
 
     /**
@@ -242,9 +241,8 @@ class DockerSettingsEditor internal constructor(project: Project) :
      */
     override fun createEditor(): JComponent {
         // https://www.jetbrains.org/intellij/sdk/docs/user_interface_components/kotlin_ui_dsl.html
-        dockerHostType.addItemListener{ event ->
-            val index = dockerHostTypes.map { it.first }.indexOf(DockerHostType.SERVICE)
-            //val index = (event.source as ComboBox<*>).selectedIndex
+        hostType.addItemListener{ event ->
+            val index = hostTypes.map { it.first }.indexOf(DockerHostType.SERVICE)
             if ((event.source as ComboBox<*>).selectedIndex == index) {
                 dockerCompose.isEditable = true
             } else {
@@ -255,19 +253,19 @@ class DockerSettingsEditor internal constructor(project: Project) :
         return panel {
             row() {
                 targetType()
-                target()
+                targetName()
             }
             row("Parameters:") { targetParams() }
             titledRow("Remote Environment") {}
             row() {
-                dockerHostType()
-                dockerHost()
+                hostType()
+                hostName()
             }
-            row("Python interpreter:") { python() }
+            row("Python interpreter:") { pythonExe() }
             row("Python options:") { pythonOpts() }
             row("Remote working directory:") { remoteWorkDir() }
             titledRow("Local Environment") {}
-            row("Docker command:") { docker() }
+            row("Docker command:") { dockerExe() }
             row("Docker compose file:") { dockerCompose() }
             row("Docker options:") { dockerOpts() }
             row("Local working directory:") { localWorkDir() }
@@ -281,17 +279,17 @@ class DockerSettingsEditor internal constructor(project: Project) :
      */
     override fun resetEditorFrom(config: DockerRunConfiguration) {
         config.apply {
-            target.text = settings.targetName
+            targetName.text = settings.targetName
             targetType.selectedIndex = targetTypes.map{ it.first }.indexOf(settings.targetType)
             targetParams.text = settings.targetParams
-            python.text = settings.pythonExe
+            pythonExe.text = settings.pythonExe
             pythonOpts.text = settings.pythonOpts
             remoteWorkDir.text = settings.remoteWorkDir
-            docker.text = settings.dockerExe
+            dockerExe.text = settings.dockerExe
             dockerCompose.text = settings.dockerCompose
             dockerOpts.text = settings.dockerOpts
-            dockerHost.text = settings.hostName
-            dockerHostType.selectedIndex = dockerHostTypes.map{ it.first }.indexOf(settings.hostType)
+            hostName.text = settings.hostName
+            hostType.selectedIndex = hostTypes.map{ it.first }.indexOf(settings.hostType)
             localWorkDir.text = settings.localWorkDir
         }
         return
@@ -307,17 +305,17 @@ class DockerSettingsEditor internal constructor(project: Project) :
         // critical.
         config.apply {
             settings = DockerSettings()
-            settings.targetName = target.text
+            settings.targetName = targetName.text
             settings.targetType = targetTypes[targetType.selectedIndex].first
             settings.targetParams = targetParams.text
-            settings.pythonExe = python.text
+            settings.pythonExe = pythonExe.text
             settings.pythonOpts = pythonOpts.text
             settings.remoteWorkDir = remoteWorkDir.text
-            settings.dockerExe = docker.text
+            settings.dockerExe = dockerExe.text
             settings.dockerCompose = dockerCompose.text
             settings.dockerOpts = dockerOpts.text
-            settings.hostName = dockerHost.text
-            settings.hostType = dockerHostTypes[dockerHostType.selectedIndex].first
+            settings.hostName = hostName.text
+            settings.hostType = hostTypes[hostType.selectedIndex].first
             settings.localWorkDir = localWorkDir.text
         }
         return
