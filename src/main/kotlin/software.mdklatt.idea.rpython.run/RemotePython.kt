@@ -2,6 +2,11 @@ package software.mdklatt.idea.rpython.run
 
 import com.intellij.execution.configurations.*
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.util.JDOMExternalizerUtil
+import com.intellij.util.getOrCreate
+import org.jdom.Element
+import java.util.*
 
 
 /**
@@ -44,7 +49,7 @@ class RemotePythonConfigurationType : ConfigurationType {
      *
      * @return the run configuration factories.
      */
-    override fun getConfigurationFactories() = arrayOf<ConfigurationFactory>(
+    override fun getConfigurationFactories() = arrayOf(
         SecureShellConfigurationFactory(this),
         VagrantConfigurationFactory(this),
         DockerConfigurationFactory(this),
@@ -55,4 +60,72 @@ class RemotePythonConfigurationType : ConfigurationType {
 /**
  * Python execution target types.
  */
-enum class PythonTargetType { MODULE, SCRIPT }
+enum class PythonTargetType { MODULE, SCRIPT }  // TODO: internal
+
+
+/**
+ * Manage common configuration settings.
+ */
+internal abstract class RemotePythonSettings protected constructor() {
+
+    internal abstract val xmlTagName: String
+
+    private val logger = Logger.getInstance(this::class.java)  // runtime class resolution
+    private var id: UUID? = null
+
+    var targetName = ""
+    var targetType = PythonTargetType.SCRIPT
+    var targetParams = ""
+    var pythonExe = ""
+        get() = field.ifBlank { "python3" }
+    var pythonOpts = ""
+    var remoteWorkDir = ""
+    var localWorkDir = ""
+
+    /**
+     * Load stored settings.
+     *
+     * @param element: JDOM element
+     */
+    internal open fun load(element: Element) {
+        element.getOrCreate(xmlTagName).let {
+            val str = JDOMExternalizerUtil.readField(it, "id", "")
+            id = if (str.isEmpty()) UUID.randomUUID() else UUID.fromString(str)
+            logger.debug("loading settings for configuration ${id.toString()}")
+            targetName = JDOMExternalizerUtil.readField(it, "targetName", "")
+            targetType = PythonTargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
+            targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
+            pythonExe = JDOMExternalizerUtil.readField(it, "pythonExe", "")
+            pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
+            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
+            localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
+        }
+        return
+    }
+
+    /**
+     * Save settings.
+     *
+     * @param element: JDOM element
+     */
+    internal open fun save(element: Element) {
+        val default = element.getAttributeValue("default")?.toBoolean() ?: false
+        element.getOrCreate(xmlTagName).let {
+            if (!default) {
+                id = id ?: UUID.randomUUID()
+                logger.debug("saving settings for configuration ${id.toString()}")
+                JDOMExternalizerUtil.writeField(it, "id", id.toString())
+            } else {
+                logger.debug("saving settings for default configuration")
+            }
+            JDOMExternalizerUtil.writeField(it, "targetName", targetName)
+            JDOMExternalizerUtil.writeField(it, "targetType", targetType.name)
+            JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
+            JDOMExternalizerUtil.writeField(it, "pythonExe", pythonExe)
+            JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
+            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
+            JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
+        }
+        return
+    }
+}
