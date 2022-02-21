@@ -31,7 +31,7 @@ internal class DockerSettingsTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         settings = DockerSettings().apply {
-            targetType = PythonTargetType.MODULE
+            targetType = TargetType.MODULE
             targetName = "pymod"
             targetParams = "-w INFO"
             pythonExe = "python3.7"
@@ -52,7 +52,7 @@ internal class DockerSettingsTest : BasePlatformTestCase() {
      */
     fun testConstructor() {
         DockerSettings().apply {
-            assertEquals(PythonTargetType.SCRIPT, targetType)
+            assertEquals(TargetType.SCRIPT, targetType)
             assertEquals("", targetName)
             assertEquals("", targetParams)
             assertEquals("python3", pythonExe)
@@ -130,7 +130,7 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        factory = DockerConfigurationFactory(RPythonConfigurationType())
     }
 
     /**
@@ -162,8 +162,8 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
-        config = DockerRunConfiguration(project, factory, "Docker Python Test")
+        val factory = DockerConfigurationFactory(RPythonConfigurationType())
+        config = DockerRunConfiguration(project, factory, DockerSettingsFactory(), "Docker Python Test")
         element = Element("configuration")
         element.getOrCreate(config.settings.xmlTagName).let {
             JDOMExternalizerUtil.writeField(it, "targetName", "script.py")
@@ -182,12 +182,12 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
      * Test the readExternal() method.
      */
     fun testReadExternal() {
-        config.apply {
-            readExternal(element)
-            assertEquals("script.py", settings.targetName)
-            assertEquals("python", settings.pythonExe)
-            assertEquals("", settings.pythonOpts)
-            assertEquals(DockerHostType.IMAGE, settings.hostType)
+        (config.settings as DockerSettings).let {
+            config.readExternal(element)
+            assertEquals("script.py", it.targetName)
+            assertEquals("python", it.pythonExe)
+            assertEquals("", it.pythonOpts)
+            assertEquals(DockerHostType.IMAGE, it.hostType)
         }
     }
 
@@ -207,24 +207,49 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
  * Unit tests for the DockerSettingsEditor class.
  */
 internal class DockerSettingsEditorTest : BasePlatformTestCase() {
+
+    private val factory = DockerConfigurationFactory(RPythonConfigurationType())
+    private lateinit var config: DockerRunConfiguration
+    private lateinit var editor: DockerSettingsEditor
+
     /**
-     * Test the primary constructor.
+     * Per-test initialization.
      */
-    fun testConstructor() {
-        DockerSettingsEditor(project).apply {
-            assertEquals(0, targetType.selectedIndex)
-            assertTrue(targetName.text.isBlank())
-            assertTrue(pythonExe.text.isBlank())
-            assertTrue(pythonOpts.text.isBlank())
-            assertTrue(remoteWorkDir.text.isBlank())
-            assertEquals(0, hostType.selectedIndex)
-            assertTrue(hostName.text.isBlank())
-            assertTrue(localWorkDir.text.isBlank())
-            assertTrue(dockerExe.text.isBlank())
-            assertTrue(dockerCompose.text.isBlank())
-            assertFalse(dockerCompose.isEditable)
-            assertTrue(dockerOpts.text.isBlank())
-            assertTrue(localWorkDir.text.isBlank())
+    override fun setUp() {
+        super.setUp()
+        config = factory.createTemplateConfiguration(project)
+        editor = DockerSettingsEditor(project)
+        val settings = config.settings as DockerSettings
+        settings.apply {
+            pythonExe = "/bin/python"
+            hostName = "image:latest"
+            hostType = DockerHostType.IMAGE
+        }
+    }
+
+    /**
+     * Test default editor settings
+     */
+    fun testDefault() {
+        editor.applyTo(config)
+        (config.settings as DockerSettings).apply {
+            assertEquals("python3", pythonExe)
+            assertEquals("docker", dockerExe)
+        }
+
+    }
+
+    /**
+     * Test round-trip set/get of editor fields.
+     */
+    fun testEditor() {
+        editor.resetFrom(config)
+        config.settings = config.settingsFactory.createSettings()
+        editor.applyTo(config)
+        (config.settings as DockerSettings).apply {
+            assertEquals("/bin/python", pythonExe)
+            assertEquals("image:latest", hostName)
+            assertEquals(DockerHostType.IMAGE, hostType)
         }
     }
 }

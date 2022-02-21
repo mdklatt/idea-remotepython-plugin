@@ -7,8 +7,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.jdom.Element
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.rpython.run.RemotePythonConfigurationType
-import software.mdklatt.idea.rpython.run.PythonTargetType
+import software.mdklatt.idea.rpython.run.RPythonConfigurationType
+import software.mdklatt.idea.rpython.run.TargetType
 import software.mdklatt.idea.rpython.run.VagrantConfigurationFactory
 import software.mdklatt.idea.rpython.run.VagrantRunSettings
 
@@ -18,7 +18,7 @@ import software.mdklatt.idea.rpython.run.VagrantRunSettings
  */
 class VagrantConfigurationFactoryTest {
 
-    private val factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
+    private val factory = VagrantConfigurationFactory(RPythonConfigurationType())
 
     /**
      * Test the id property.
@@ -44,7 +44,7 @@ class VagrantConfigurationFactoryTest {
 class VagrantRunSettingsTest {
 
     private var settings = VagrantRunSettings().apply {
-        targetType = PythonTargetType.MODULE
+        targetType = TargetType.MODULE
         target = "pymod"
         targetParams = "-w INFO"
         python = "python3.7"
@@ -61,7 +61,7 @@ class VagrantRunSettingsTest {
     @Test
     fun testCtor() {
         VagrantRunSettings().apply {
-            assertEquals(PythonTargetType.SCRIPT, targetType)
+            assertEquals(TargetType.SCRIPT, targetType)
             assertEquals("", target)
             assertEquals("", targetParams)
             assertEquals("python3", python)

@@ -163,7 +163,7 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
             else {
                 withExePath(settings.python)
             }
-            if (settings.targetType == PythonTargetType.MODULE) {
+            if (settings.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
             addParameter(settings.target)
@@ -189,8 +189,8 @@ class SecureShellSettingsEditor internal constructor(project: Project) :
             "Module name:",
         )
         private val targetTypeValues = arrayOf(
-            PythonTargetType.SCRIPT,
-            PythonTargetType.MODULE
+            TargetType.SCRIPT,
+            TargetType.MODULE
         )
     }
 
@@ -297,7 +297,7 @@ class SecureShellRunSettings internal constructor() {
     }
 
     var target = ""
-    var targetType = PythonTargetType.SCRIPT
+    var targetType = TargetType.SCRIPT
     var targetParams = ""
     var python = ""
         get() = if (field.isNotBlank()) field else "python3"
@@ -318,7 +318,7 @@ class SecureShellRunSettings internal constructor() {
     internal constructor(element: Element) : this() {
         element.getOrCreate(JDOM_TAG).let {
             target = JDOMExternalizerUtil.readField(it, "target", "")
-            targetType = PythonTargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
+            targetType = TargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
             targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
             python = JDOMExternalizerUtil.readField(it, "python", "")
             pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")

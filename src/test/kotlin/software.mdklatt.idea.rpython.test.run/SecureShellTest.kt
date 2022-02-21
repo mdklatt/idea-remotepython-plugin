@@ -7,8 +7,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.jdom.Element
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.rpython.run.RemotePythonConfigurationType
-import software.mdklatt.idea.rpython.run.PythonTargetType
+import software.mdklatt.idea.rpython.run.RPythonConfigurationType
+import software.mdklatt.idea.rpython.run.TargetType
 import software.mdklatt.idea.rpython.run.SecureShellConfigurationFactory
 import software.mdklatt.idea.rpython.run.SecureShellRunSettings
 
@@ -18,7 +18,7 @@ import software.mdklatt.idea.rpython.run.SecureShellRunSettings
  */
 class SecureShellConfigurationFactoryTest {
 
-    private val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
+    private val factory = SecureShellConfigurationFactory(RPythonConfigurationType())
 
     /**
      * Test the id property.
@@ -44,7 +44,7 @@ class SecureShellConfigurationFactoryTest {
 class SecureShellRunSettingsTest {
 
     private var settings = SecureShellRunSettings().apply {
-        targetType = PythonTargetType.MODULE
+        targetType = TargetType.MODULE
         target = "pymod"
         targetParams = "-w INFO"
         python = "python3.7"
@@ -62,7 +62,7 @@ class SecureShellRunSettingsTest {
     @Test
     fun testCtor() {
         SecureShellRunSettings().apply {
-            assertEquals(PythonTargetType.SCRIPT, targetType)
+            assertEquals(TargetType.SCRIPT, targetType)
             assertEquals("", target)
             assertEquals("", targetParams)
             assertEquals("python3", python)

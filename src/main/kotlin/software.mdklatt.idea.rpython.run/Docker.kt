@@ -9,17 +9,14 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.panel
+import com.intellij.ui.layout.LayoutBuilder
 import com.intellij.util.getOrCreate
 import org.jdom.Element
-import javax.swing.JComponent
 import javax.swing.JTextField
 
 
@@ -36,7 +33,7 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
      * @return the run configuration instance.
      */
     override fun createTemplateConfiguration(project: Project) =
-            DockerRunConfiguration(project, this, "")
+            DockerRunConfiguration(project, this, DockerSettingsFactory(), "")
 
     /**
      * The name of the run configuration variant created by this factory.
@@ -59,10 +56,8 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class DockerRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
-        RunConfigurationBase<RunProfileState>(project, factory, name) {
-
-    internal var settings = DockerSettings()
+class DockerRunConfiguration internal constructor(project: Project, configFactory: ConfigurationFactory, settingsFactory: RPythonSettingsFactory, name: String) :
+        RPythonRunConfiguration(project, configFactory, settingsFactory, name) {
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -136,7 +131,7 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val settings = config.settings
+        val settings = config.settings as DockerSettings
         val runOptions = mapOf(
             "workdir" to settings.remoteWorkDir.ifBlank { null },  // null to omit
             "rm" to true,
@@ -181,7 +176,7 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
     private fun python(settings: DockerSettings): Array<String> {
         val command = PosixCommandLine().apply {
             withExePath(settings.pythonExe)
-            if (settings.targetType == PythonTargetType.MODULE) {
+            if (settings.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
             addParameter(settings.targetName)
@@ -199,126 +194,100 @@ class DockerCommandLineState internal constructor(private val config: DockerRunC
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
  */
 class DockerSettingsEditor internal constructor(project: Project) :
-        SettingsEditor<DockerRunConfiguration>() {
+        RPythonSettingsEditor<DockerRunConfiguration>(project) {
 
     companion object {
-        private val targetTypes = listOf(
-            Pair(PythonTargetType.SCRIPT, "Script path:"),
-            Pair(PythonTargetType.MODULE, "Module name:"),
-        )
         private val hostTypes = listOf(
             Pair(DockerHostType.IMAGE, "Image name:"),
             Pair(DockerHostType.CONTAINER, "Container name:"),
             Pair(DockerHostType.SERVICE, "Service name:"),
         )
-        private val fileChooser = FileChooserDescriptorFactory.createSingleFileDescriptor()
     }
 
-    var targetName = JTextField()
-    var targetType = ComboBox(targetTypes.map{ it.second }.toTypedArray())
-    var targetParams = RawCommandLineEditor()
-    var pythonExe = JTextField()
-    var pythonOpts = RawCommandLineEditor()
-    var remoteWorkDir = JTextField()
-    var hostName = JTextField()
-    var hostType = ComboBox(hostTypes.map{ it.second }.toTypedArray())
-    var dockerExe = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Docker Command", "", project, fileChooser)
+    private var hostName = JTextField()
+    private var hostType = ComboBox(hostTypes.map{ it.second }.toTypedArray())
+    private var dockerExe = TextFieldWithBrowseButton().apply {
+        addBrowseFolderListener("Docker Executable", "", project, fileChooser)
     }
-    var dockerOpts = RawCommandLineEditor()
-    var dockerCompose = TextFieldWithBrowseButton().apply {
+    private var dockerOpts = RawCommandLineEditor()
+    private var dockerCompose = TextFieldWithBrowseButton().apply {
         isEditable = false
         addBrowseFolderListener("Docker Compose File", "", project, fileChooser)
     }
-    var localWorkDir = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Docker Working Directory", "", project, fileChooser)
+
+
+    /**
+     *
+     */
+    override fun addHostFields(layout: LayoutBuilder) {
+        layout.row {
+            hostType()
+            hostName()
+        }
     }
 
     /**
-     * Create the widget for this editor.
+     * Reset host fields from a configuration state.
      *
-     * @return UI widget
+     * @param config: input configuration
      */
-    override fun createEditor(): JComponent {
-        // https://www.jetbrains.org/intellij/sdk/docs/user_interface_components/kotlin_ui_dsl.html
-        hostType.addItemListener{ event ->
-            val index = hostTypes.map { it.first }.indexOf(DockerHostType.SERVICE)
-            if ((event.source as ComboBox<*>).selectedIndex == index) {
-                dockerCompose.isEditable = true
-            } else {
-                dockerCompose.text = ""
-                dockerCompose.isEditable = false
-            }
+    override fun resetHostFields(config: DockerRunConfiguration) {
+        (config.settings as DockerSettings).let {
+            hostName.text = it.hostName
+            hostType.selectedIndex = hostTypes.map{ it.first }.indexOf(it.hostType)
         }
-        return panel {
-            row() {
-                targetType()
-                targetName()
-            }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
-            row() {
-                hostType()
-                hostName()
-            }
-            row("Python interpreter:") { pythonExe() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
+    }
+
+    /**
+     * Apply host fields from a configuration state.
+     *
+     * @param config: output configuration
+     */
+    override fun applyHostFields(config: DockerRunConfiguration) {
+        (config.settings as DockerSettings).let {
+            it.dockerExe = dockerExe.text
+            it.dockerCompose = dockerCompose.text
+            it.dockerOpts = dockerOpts.text
+            it.hostName = hostName.text
+            it.hostType = hostTypes[hostType.selectedIndex].first
+        }
+    }
+
+    /**
+     *
+     */
+    override fun addExecutorFields(layout: LayoutBuilder) {
+        layout.apply {
             row("Docker command:") { dockerExe() }
             row("Docker compose file:") { dockerCompose() }
             row("Docker options:") { dockerOpts() }
-            row("Local working directory:") { localWorkDir() }
         }
     }
 
     /**
-     * Reset editor fields from the configuration state.
+     * Reset executor fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: input configuration
      */
-    override fun resetEditorFrom(config: DockerRunConfiguration) {
-        config.apply {
-            targetName.text = settings.targetName
-            targetType.selectedIndex = targetTypes.map{ it.first }.indexOf(settings.targetType)
-            targetParams.text = settings.targetParams
-            pythonExe.text = settings.pythonExe
-            pythonOpts.text = settings.pythonOpts
-            remoteWorkDir.text = settings.remoteWorkDir
-            dockerExe.text = settings.dockerExe
-            dockerCompose.text = settings.dockerCompose
-            dockerOpts.text = settings.dockerOpts
-            hostName.text = settings.hostName
-            hostType.selectedIndex = hostTypes.map{ it.first }.indexOf(settings.hostType)
-            localWorkDir.text = settings.localWorkDir
+    override fun resetExecutorFields(config: DockerRunConfiguration) {
+        (config.settings as DockerSettings).let {
+            dockerExe.text = it.dockerExe
+            dockerCompose.text = it.dockerCompose
+            dockerOpts.text = it.dockerOpts
         }
-        return
     }
 
     /**
-     * Apply editor fields to the configuration state.
+     * Apply executor fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: output configuration
      */
-    override fun applyEditorTo(config: DockerRunConfiguration) {
-        // This apparently gets called for every key press, so performance is
-        // critical.
-        config.apply {
-            settings = DockerSettings()
-            settings.targetName = targetName.text
-            settings.targetType = targetTypes[targetType.selectedIndex].first
-            settings.targetParams = targetParams.text
-            settings.pythonExe = pythonExe.text
-            settings.pythonOpts = pythonOpts.text
-            settings.remoteWorkDir = remoteWorkDir.text
-            settings.dockerExe = dockerExe.text
-            settings.dockerCompose = dockerCompose.text
-            settings.dockerOpts = dockerOpts.text
-            settings.hostName = hostName.text
-            settings.hostType = hostTypes[hostType.selectedIndex].first
-            settings.localWorkDir = localWorkDir.text
+    override fun applyExecutorFields(config: DockerRunConfiguration) {
+        (config.settings as DockerSettings).let {
+            it.dockerExe = dockerExe.text
+            it.dockerCompose = dockerCompose.text
+            it.dockerOpts = dockerOpts.text
         }
-        return
     }
 }
 
@@ -326,7 +295,7 @@ class DockerSettingsEditor internal constructor(project: Project) :
 /**
  * Manage DockerRunConfiguration runtime settings.
  */
-internal class DockerSettings : RemotePythonSettings() {
+internal class DockerSettings : RPythonSettings() {
 
     override val xmlTagName = "ansible-playbook"
 
@@ -342,7 +311,7 @@ internal class DockerSettings : RemotePythonSettings() {
      *
      * @param element: settings root element
      */
-    internal override fun load(element: Element) {
+    override fun load(element: Element) {
         super.load(element)
         element.getOrCreate(xmlTagName).let {
             dockerExe = JDOMExternalizerUtil.readField(it, "dockerExe", "")
@@ -359,7 +328,7 @@ internal class DockerSettings : RemotePythonSettings() {
      *
      * @param element: settings root element
      */
-    internal override fun save(element: Element) {
+    override fun save(element: Element) {
         super.save(element)
         element.getOrCreate(xmlTagName).let {
             JDOMExternalizerUtil.writeField(it, "dockerExe", dockerExe)
@@ -370,4 +339,10 @@ internal class DockerSettings : RemotePythonSettings() {
         }
         return
     }
+}
+
+internal class DockerSettingsFactory: RPythonSettingsFactory() {
+
+    override fun createSettings() = DockerSettings()
+
 }
