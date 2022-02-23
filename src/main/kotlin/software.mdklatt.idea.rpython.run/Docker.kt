@@ -25,7 +25,7 @@ import javax.swing.JTextField
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
+class DockerConfigurationFactory(type: RPythonConfigurationType) : RPythonConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
@@ -33,7 +33,7 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
      * @return the run configuration instance.
      */
     override fun createTemplateConfiguration(project: Project) =
-            DockerRunConfiguration(project, this, DockerSettingsFactory(), "")
+            DockerRunConfiguration(project, this, "")
 
     /**
      * The name of the run configuration variant created by this factory.
@@ -43,11 +43,9 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
     override fun getName() = "Docker Host"
 
     /**
-     * Run configuration ID used for serialization.
      *
-     * @return: unique ID
      */
-    override fun getId(): String = this::class.java.simpleName
+    override fun createSettings() = DockerSettings()
 }
 
 
@@ -56,8 +54,8 @@ class DockerConfigurationFactory(type: ConfigurationType) : ConfigurationFactory
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class DockerRunConfiguration internal constructor(project: Project, configFactory: ConfigurationFactory, settingsFactory: RPythonSettingsFactory, name: String) :
-        RPythonRunConfiguration(project, configFactory, settingsFactory, name) {
+class DockerRunConfiguration internal constructor(project: Project, factory: DockerConfigurationFactory, name: String) :
+        RPythonRunConfiguration(project, factory,  name) {
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -78,39 +76,13 @@ class DockerRunConfiguration internal constructor(project: Project, configFactor
      */
     override fun getState(executor: Executor, environment: ExecutionEnvironment) =
             DockerCommandLineState(this, environment)
-
-    /**
-     * Read settings from an XML element.
-     *
-     * This is part of the RunConfiguration persistence API.
-     *
-     * @param element: input element.
-     */
-    override fun readExternal(element: Element) {
-        super.readExternal(element)
-        settings.load(element)
-        return
-    }
-
-    /**
-     * Write settings to an XML element.
-     *
-     * This is part of the RunConfiguration persistence API.
-
-     * @param element: output element.
-     */
-    override fun writeExternal(element: Element) {
-        super.writeExternal(element)
-        settings.save(element)
-        return
-    }
 }
 
 
 /**
  * Docker host type.
  */
-internal enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
+enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
 
 
 /**
@@ -295,7 +267,7 @@ class DockerSettingsEditor internal constructor(project: Project) :
 /**
  * Manage DockerRunConfiguration runtime settings.
  */
-internal class DockerSettings : RPythonSettings() {
+class DockerSettings : RPythonSettings() {
 
     override val xmlTagName = "ansible-playbook"
 
@@ -339,10 +311,4 @@ internal class DockerSettings : RPythonSettings() {
         }
         return
     }
-}
-
-internal class DockerSettingsFactory: RPythonSettingsFactory() {
-
-    override fun createSettings() = DockerSettings()
-
 }

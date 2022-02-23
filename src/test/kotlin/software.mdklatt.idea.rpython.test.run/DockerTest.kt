@@ -163,7 +163,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         val factory = DockerConfigurationFactory(RPythonConfigurationType())
-        config = DockerRunConfiguration(project, factory, DockerSettingsFactory(), "Docker Python Test")
+        config = DockerRunConfiguration(project, factory, "Docker Python Test")
         element = Element("configuration")
         element.getOrCreate(config.settings.xmlTagName).let {
             JDOMExternalizerUtil.writeField(it, "targetName", "script.py")
@@ -244,7 +244,7 @@ internal class DockerSettingsEditorTest : BasePlatformTestCase() {
      */
     fun testEditor() {
         editor.resetFrom(config)
-        config.settings = config.settingsFactory.createSettings()
+        config.settings = (config.factory as DockerConfigurationFactory).createSettings()
         editor.applyTo(config)
         (config.settings as DockerSettings).apply {
             assertEquals("/bin/python", pythonExe)

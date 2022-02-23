@@ -28,7 +28,7 @@ class RPythonConfigurationType : ConfigurationType {
      * The ID is used to store run configuration settings in a project or workspace file and
      * must not change between plugin versions.
      */
-    override fun getId(): String = this::class.java.simpleName
+    override fun getId() = "RPythonConfigurationType"
 
     /**
      * Returns the 16x16 icon used to represent the configuration type.
@@ -67,15 +67,24 @@ class RPythonConfigurationType : ConfigurationType {
 }
 
 
+abstract class RPythonConfigurationFactory(type: RPythonConfigurationType):
+        ConfigurationFactory(type) {
+    /**
+     * Create a new settings object for the run configuration.
+     */
+    abstract fun createSettings(): RPythonSettings
+}
+
+
 /**
  * Run Configuration for executing Python in a <a href="https://docs.docker.com/">Docker</a> container.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-abstract class RPythonRunConfiguration protected constructor(project: Project, configFactory: ConfigurationFactory, internal val settingsFactory: RPythonSettingsFactory, name: String) :
-    RunConfigurationBase<RunProfileState>(project, configFactory, name) {
+abstract class RPythonRunConfiguration protected constructor(project: Project, factory: RPythonConfigurationFactory, name: String) :
+    RunConfigurationBase<RunProfileState>(project, factory, name) {
 
-    internal var settings = settingsFactory.createSettings()
+    var settings = (getFactory() as RPythonConfigurationFactory).createSettings()
 
     /**
      * Read settings from an XML element.
@@ -84,7 +93,7 @@ abstract class RPythonRunConfiguration protected constructor(project: Project, c
      *
      * @param element: input element.
      */
-    override fun readExternal(element: Element) {
+    final override fun readExternal(element: Element) {
         super.readExternal(element)
         settings.load(element)
         return
@@ -94,10 +103,10 @@ abstract class RPythonRunConfiguration protected constructor(project: Project, c
      * Write settings to an XML element.
      *
      * This is part of the RunConfiguration persistence API.
-
+     *
      * @param element: output element.
      */
-    override fun writeExternal(element: Element) {
+    final override fun writeExternal(element: Element) {
         super.writeExternal(element)
         settings.save(element)
         return
@@ -114,7 +123,7 @@ enum class TargetType { MODULE, SCRIPT }  // TODO: internal
 /**
  * Manage common configuration settings.
  */
-internal abstract class RPythonSettings protected constructor() {
+abstract class RPythonSettings protected constructor() {
 
     internal abstract val xmlTagName: String
 
@@ -176,13 +185,6 @@ internal abstract class RPythonSettings protected constructor() {
         }
         return
     }
-}
-
-
-abstract class RPythonSettingsFactory {
-
-    internal abstract fun createSettings(): RPythonSettings
-
 }
 
 
@@ -306,7 +308,7 @@ abstract class RPythonSettingsEditor<Config: RPythonRunConfiguration> internal c
     final override fun applyEditorTo(config: Config) {
         // This apparently gets called for every key press, so performance is
         // critical.
-        config.settings = config.settingsFactory.createSettings()
+        config.settings = (config.factory as RPythonConfigurationFactory).createSettings()
         config.settings.let {
             it.targetName = targetName.text
             it.targetType = targetTypes[targetType.selectedIndex].first
