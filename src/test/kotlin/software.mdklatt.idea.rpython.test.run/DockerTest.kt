@@ -134,17 +134,10 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
     }
 
     /**
-     * Test the `id` property.
-     */
-    fun testId() {
-        assertTrue(factory.id.isNotBlank())
-    }
-
-    /**
      * Test the `name` property.
      */
     fun testName() {
-        assertTrue(factory.name.isNotBlank())
+        assertEquals("Docker Host", factory.name)
     }
 }
 

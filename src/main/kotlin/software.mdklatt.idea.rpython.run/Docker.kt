@@ -43,7 +43,7 @@ class DockerConfigurationFactory(type: RPythonConfigurationType) : RPythonConfig
     override fun getName() = "Docker Host"
 
     /**
-     *
+     * Create a new settings object for the run configuration.
      */
     override fun createSettings() = DockerSettings()
 }
@@ -56,7 +56,6 @@ class DockerConfigurationFactory(type: RPythonConfigurationType) : RPythonConfig
  */
 class DockerRunConfiguration internal constructor(project: Project, factory: DockerConfigurationFactory, name: String) :
         RPythonRunConfiguration(project, factory,  name) {
-
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
      * returned from this method may also implement [com.intellij.execution.impl.CheckableRunConfigurationEditor]. The returned object
@@ -187,7 +186,6 @@ class DockerSettingsEditor internal constructor(project: Project) :
         addBrowseFolderListener("Docker Compose File", "", project, fileChooser)
     }
 
-
     /**
      *
      */
@@ -269,7 +267,7 @@ class DockerSettingsEditor internal constructor(project: Project) :
  */
 class DockerSettings : RPythonSettings() {
 
-    override val xmlTagName = "ansible-playbook"
+    override val xmlTagName = "rpython-docker"
 
     var dockerExe = ""
         get() = field.ifBlank { "docker" }
@@ -292,7 +290,6 @@ class DockerSettings : RPythonSettings() {
             hostName = JDOMExternalizerUtil.readField(it, "hostName", "")
             hostType = DockerHostType.valueOf(JDOMExternalizerUtil.readField(it, "hostType", "IMAGE"))
         }
-        return
     }
 
     /**
@@ -309,6 +306,5 @@ class DockerSettings : RPythonSettings() {
             JDOMExternalizerUtil.writeField(it, "hostName", hostName)
             JDOMExternalizerUtil.writeField(it, "hostType", hostType.name)
         }
-        return
     }
 }
