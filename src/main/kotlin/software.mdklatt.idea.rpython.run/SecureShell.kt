@@ -7,15 +7,12 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.panel
+import com.intellij.ui.layout.LayoutBuilder
 import com.intellij.util.getOrCreate
-import javax.swing.JComponent
 import javax.swing.JTextField
 import org.jdom.Element
 
@@ -25,7 +22,7 @@ import org.jdom.Element
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class SecureShellConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
+class SecureShellConfigurationFactory(type: RPythonConfigurationType) : RPythonConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
@@ -43,11 +40,9 @@ class SecureShellConfigurationFactory(type: ConfigurationType) : ConfigurationFa
     override fun getName() = "SSH Host"
 
     /**
-     * Run configuration ID used for serialization.
-     *
-     * @return: unique ID
+     * Create a new settings object for the run configuration.
      */
-    override fun getId(): String = this::class.java.simpleName
+    override fun createSettings() = SecureShellSettings()
 }
 
 
@@ -56,11 +51,8 @@ class SecureShellConfigurationFactory(type: ConfigurationType) : ConfigurationFa
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class SecureShellRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
-        RunConfigurationBase<RunProfileState>(project, factory, name) {
-
-    var settings = SecureShellRunSettings()
-
+class SecureShellRunConfiguration internal constructor(project: Project, factory: SecureShellConfigurationFactory, name: String) :
+        RPythonRunConfiguration(project, factory,  name) {
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
      * returned from this method may also implement [com.intellij.execution.impl.CheckableRunConfigurationEditor]. The returned object
@@ -80,32 +72,6 @@ class SecureShellRunConfiguration internal constructor(project: Project, factory
      */
     override fun getState(executor: Executor, environment: ExecutionEnvironment) =
             SecureShellCommandLineState(this, environment)
-
-    /**
-     * Read settings from a JDOM element.
-     *
-     * This is part of the RunConfiguration persistence API.
-     *
-     * @param element: input element.
-     */
-    override fun readExternal(element: Element) {
-        super.readExternal(element)
-        settings = SecureShellRunSettings(element)
-        return
-    }
-
-    /**
-     * Write settings to a JDOM element.
-     *
-     * This is part of the RunConfiguration persistence API.
-
-     * @param element: output element.
-     */
-    override fun writeExternal(element: Element) {
-        super.writeExternal(element)
-        settings.write(element)
-        return
-    }
 }
 
 
@@ -127,8 +93,8 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val settings = config.settings
-        val command = PosixCommandLine(settings.ssh)
+        val settings = config.settings as SecureShellSettings
+        val command = PosixCommandLine(settings.sshExe)
         if (settings.sshOpts.isNotBlank()) {
             command.addParameters(PosixCommandLine.split(settings.sshOpts))
         }
@@ -153,20 +119,20 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
      *
      * @return: Python command string
      */
-    private fun python(settings: SecureShellRunSettings): String {
+    private fun python(settings: SecureShellSettings): String {
         // TODO: Identical to VagrantCommandLineState except for parameter type.
         val command = PosixCommandLine().apply {
             if (settings.remoteWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(settings.remoteWorkDir, "&&", settings.python)
+                addParameters(settings.remoteWorkDir, "&&", settings.pythonExe)
             }
             else {
-                withExePath(settings.python)
+                withExePath(settings.pythonExe)
             }
             if (settings.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
-            addParameter(settings.target)
+            addParameter(settings.targetName)
             addParameters(PosixCommandLine.split(settings.targetParams))
         }
         return command.commandLineString
@@ -180,109 +146,82 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
  */
 class SecureShellSettingsEditor internal constructor(project: Project) :
-        SettingsEditor<SecureShellRunConfiguration>() {
+        RPythonSettingsEditor<SecureShellRunConfiguration>(project) {
 
-    companion object {
-        // Ordering of targetTypeLabels and targetTypeValues must agree.
-        private val targetTypeLabels = arrayOf(
-            "Script path:",
-            "Module name:",
-        )
-        private val targetTypeValues = arrayOf(
-            TargetType.SCRIPT,
-            TargetType.MODULE
-        )
-    }
-
-    var target = JTextField()
-    var targetType = ComboBox<String>(targetTypeLabels)
-    var targetParams = RawCommandLineEditor()
-    var python = JTextField()
-    var pythonOpts = RawCommandLineEditor()
-    var remoteWorkDir = JTextField()
-    var ssh = TextFieldWithBrowseButton().apply {
+    var sshExe = TextFieldWithBrowseButton().apply {
         addBrowseFolderListener("SSH Command", "", project,
                 FileChooserDescriptorFactory.createSingleFileDescriptor())
     }
     var sshHost = JTextField()
     var sshOpts = RawCommandLineEditor()
     var sshUser = JTextField()
-    var localWorkDir = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Local Working Directory", "", project,
-                FileChooserDescriptorFactory.createSingleFolderDescriptor())
-    }
 
     /**
-     * Create the widget for this editor.
      *
-     * @return UI widget
      */
-    override fun createEditor(): JComponent {
-        // https://www.jetbrains.org/intellij/sdk/docs/user_interface_components/kotlin_ui_dsl.html
-        return panel {
-            row() {
-                targetType()
-                target()
-            }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
+    override fun addHostFields(layout: LayoutBuilder) {
+        layout.row {
             row("Remote host:") { sshHost() }
             row("Remote user:") { sshUser() }
-            row("Python interpreter:") { python() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
-            row("SSH command:") { ssh() }
+        }
+    }
+
+    /**
+     * Reset host fields from a configuration state.
+     *
+     * @param config: input configuration
+     */
+    override fun resetHostFields(config: SecureShellRunConfiguration) {
+        (config.settings as SecureShellSettings).let {
+            sshHost.text = it.sshHost
+            sshUser.text = it.sshUser
+        }
+    }
+
+    /**
+     * Apply host fields from a configuration state.
+     *
+     * @param config: output configuration
+     */
+    override fun applyHostFields(config: SecureShellRunConfiguration) {
+        (config.settings as SecureShellSettings).let {
+            it.sshHost = sshHost.text
+            it.sshUser = sshUser.text
+        }
+    }
+
+    /**
+     *
+     */
+    override fun addExecutorFields(layout: LayoutBuilder) {
+        layout.apply {
+            row("SSH executable:") { sshExe() }
             row("SSH options:") { sshOpts() }
-            row("Local working directory:") { localWorkDir() }
         }
     }
 
     /**
-     * Reset editor fields from the configuration state.
+     * Reset executor fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: input configuration
      */
-    override fun resetEditorFrom(config: SecureShellRunConfiguration) {
-        config.apply {
-            target.text = settings.target
-            targetType.selectedIndex = targetTypeValues.indexOf(settings.targetType)
-            targetParams.text = settings.targetParams
-            python.text = settings.python
-            pythonOpts.text = settings.pythonOpts
-            remoteWorkDir.text = settings.remoteWorkDir
-            ssh.text = settings.ssh
-            sshHost.text = settings.sshHost
-            sshUser.text = settings.sshUser
-            sshOpts.text = settings.sshOpts
-            localWorkDir.text = settings.localWorkDir
+    override fun resetExecutorFields(config: SecureShellRunConfiguration) {
+        (config.settings as SecureShellSettings).let {
+            sshExe.text = it.sshExe
+            sshOpts.text = it.sshOpts
         }
-        return
     }
 
     /**
-     * Apply editor fields to the configuration state.
+     * Apply executor fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: output configuration
      */
-    override fun applyEditorTo(config: SecureShellRunConfiguration) {
-        // This apparently gets called for every key press, so performance is
-        // critical.
-        config.apply {
-            settings = SecureShellRunSettings()
-            settings.target = target.text
-            settings.targetType = targetTypeValues[targetType.selectedIndex]
-            settings.targetParams = targetParams.text
-            settings.python = python.text
-            settings.pythonOpts = pythonOpts.text
-            settings.remoteWorkDir = remoteWorkDir.text
-            settings.ssh = ssh.text
-            settings.sshHost = sshHost.text
-            settings.sshUser = sshUser.text
-            settings.sshOpts = sshOpts.text
-            settings.localWorkDir = localWorkDir.text
+    override fun applyExecutorFields(config: SecureShellRunConfiguration) {
+        (config.settings as SecureShellSettings).let {
+            it.sshExe = sshExe.text
+            it.sshOpts = sshOpts.text
         }
-        return
     }
 }
 
@@ -290,67 +229,43 @@ class SecureShellSettingsEditor internal constructor(project: Project) :
 /**
  * Manage SecureShellRunConfiguration runtime settings.
  */
-class SecureShellRunSettings internal constructor() {
+class SecureShellSettings : RPythonSettings() {
 
-    companion object {
-        private const val JDOM_TAG = "python-ssh"
-    }
+    override val xmlTagName = "rpython-ssh"
 
-    var target = ""
-    var targetType = TargetType.SCRIPT
-    var targetParams = ""
-    var python = ""
-        get() = if (field.isNotBlank()) field else "python3"
-    var pythonOpts = ""
-    var remoteWorkDir = ""
-    var ssh = ""
-        get() = if (field.isNotBlank()) field else "ssh"
+    var sshExe = ""
+        get() = field.ifBlank { "ssh" }
     var sshHost = ""
     var sshUser = ""
     var sshOpts = ""
-    var localWorkDir = ""
 
     /**
-     * Construct object from a JDOM element.
+     * Load stored settings.
      *
-     * @param element: input element
+     * @param element: settings root element
      */
-    internal constructor(element: Element) : this() {
-        element.getOrCreate(JDOM_TAG).let {
-            target = JDOMExternalizerUtil.readField(it, "target", "")
-            targetType = TargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
-            targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
-            python = JDOMExternalizerUtil.readField(it, "python", "")
-            pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
-            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
-            ssh = JDOMExternalizerUtil.readField(it, "ssh", "")
+    override fun load(element: Element) {
+        super.load(element)
+        element.getOrCreate(xmlTagName).let {
+            sshExe = JDOMExternalizerUtil.readField(it, "sshExe", "")
+            sshOpts = JDOMExternalizerUtil.readField(it, "sshOpts", "")
             sshHost = JDOMExternalizerUtil.readField(it, "sshHost", "")
             sshUser = JDOMExternalizerUtil.readField(it, "sshUser", "")
-            sshOpts = JDOMExternalizerUtil.readField(it, "sshOpts", "")
-            localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
         }
-        return
     }
 
     /**
-     * Write settings to a JDOM element.
+     * Save settings.
      *
-     * @param element: output element
+     * @param element: settings root element
      */
-    fun write(element: Element) {
-        element.getOrCreate(JDOM_TAG).let {
-            JDOMExternalizerUtil.writeField(it, "target", target)
-            JDOMExternalizerUtil.writeField(it, "targetType", targetType.name)
-            JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
-            JDOMExternalizerUtil.writeField(it, "python", python)
-            JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
-            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
-            JDOMExternalizerUtil.writeField(it, "ssh", ssh)
+    override fun save(element: Element) {
+        super.save(element)
+        element.getOrCreate(xmlTagName).let {
+            JDOMExternalizerUtil.writeField(it, "sshExe", sshExe)
             JDOMExternalizerUtil.writeField(it, "sshHost", sshHost)
             JDOMExternalizerUtil.writeField(it, "sshUser", sshUser)
             JDOMExternalizerUtil.writeField(it, "sshOpts", sshOpts)
-            JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
         }
-        return
     }
 }
