@@ -7,12 +7,12 @@ import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.ui.RawCommandLineEditor
+import com.intellij.ui.layout.LayoutBuilder
 import com.intellij.ui.layout.panel
 import com.intellij.util.getOrCreate
 import org.jdom.Element
@@ -25,7 +25,7 @@ import javax.swing.JTextField
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class VagrantConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
+class VagrantConfigurationFactory(type: RPythonConfigurationType) : RPythonConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
@@ -43,11 +43,9 @@ class VagrantConfigurationFactory(type: ConfigurationType) : ConfigurationFactor
     override fun getName() = "Vagrant Host"
 
     /**
-     * Run configuration ID used for serialization.
-     *
-     * @return: unique ID
+     * Create a new settings object for the run configuration.
      */
-    override fun getId(): String = this::class.java.simpleName
+    override fun createSettings() = VagrantSettings()
 }
 
 
@@ -56,10 +54,8 @@ class VagrantConfigurationFactory(type: ConfigurationType) : ConfigurationFactor
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class VagrantRunConfiguration internal constructor(project: Project, factory: ConfigurationFactory, name: String) :
-        RunConfigurationBase<RunProfileState>(project, factory, name) {
-
-    var settings = VagrantRunSettings()
+class VagrantRunConfiguration internal constructor(project: Project, factory: VagrantConfigurationFactory, name: String) :
+    RPythonRunConfiguration(project, factory,  name) {
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -80,32 +76,6 @@ class VagrantRunConfiguration internal constructor(project: Project, factory: Co
      */
     override fun getState(executor: Executor, environment: ExecutionEnvironment) =
             VagrantCommandLineState(this, environment)
-
-    /**
-     * Read settings from a JDOM element.
-     *
-     * This is part of the RunConfiguration persistence API.
-     *
-     * @param element: input element.
-     */
-    override fun readExternal(element: Element) {
-        super.readExternal(element)
-        settings = VagrantRunSettings(element)
-        return
-    }
-
-    /**
-     * Write settings to a JDOM element.
-     *
-     * This is part of the RunConfiguration persistence API.
-
-     * @param element: output element.
-     */
-    override fun writeExternal(element: Element) {
-        super.writeExternal(element)
-        settings.write(element)
-        return
-    }
 }
 
 
@@ -127,8 +97,8 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val settings = config.settings
-        val command = PosixCommandLine(settings.vagrant, listOf("ssh"))
+        val settings = config.settings as VagrantSettings
+        val command = PosixCommandLine(settings.vagrantExe, listOf("ssh"))
         val options = mutableMapOf<String, Any?>(
             "command" to python(settings)
         )
@@ -151,19 +121,19 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
      * @param settings: runtime settings
      * @return: Python command string
      */
-    private fun python(settings: VagrantRunSettings): String {
+    private fun python(settings: VagrantSettings): String {
         val command = PosixCommandLine().apply {
             if (settings.remoteWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(settings.remoteWorkDir, "&&", settings.python)
+                addParameters(settings.remoteWorkDir, "&&", settings.pythonExe)
             }
             else {
-                withExePath(settings.python)
+                withExePath(settings.pythonExe)
             }
             if (settings.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
-            addParameter(settings.target)
+            addParameter(settings.targetName)
             addParameters(PosixCommandLine.split(settings.targetParams))
         }
         return command.commandLineString
@@ -178,101 +148,74 @@ class VagrantCommandLineState internal constructor(private val config: VagrantRu
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
  */
 class VagrantSettingsEditor internal constructor(project: Project) :
-        SettingsEditor<VagrantRunConfiguration>() {
+    RPythonSettingsEditor<VagrantRunConfiguration>(project) {
 
-    companion object {
-        // Ordering of targetTypeLabels and targetTypeValues must agree.
-        private val targetTypeLabels = arrayOf(
-            "Script path:",
-            "Module name:"
-        )
-        private val targetTypeValues = arrayOf(
-            TargetType.SCRIPT,
-            TargetType.MODULE
-        )
-    }
-
-    var target = JTextField()
-    var targetType = ComboBox<String>(targetTypeLabels)
-    var targetParams = RawCommandLineEditor()
-    var python = JTextField()
-    var pythonOpts = RawCommandLineEditor()
-    var remoteWorkDir = JTextField()
-    var vagrant = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Vagrant Command", "", project,
+    var vagrantExe = TextFieldWithBrowseButton().apply {
+        addBrowseFolderListener("Vagrant Executable", "", project,
                 FileChooserDescriptorFactory.createSingleFileDescriptor())
     }
     var vagrantHost = JTextField()
-    var localWorkDir = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("Vagrant Working Directory", "", project,
-                FileChooserDescriptorFactory.createSingleFolderDescriptor())
-    }
 
     /**
-     * Create the widget for this editor.
      *
-     * @return UI widget
      */
-    override fun createEditor(): JComponent {
-        // https://www.jetbrains.org/intellij/sdk/docs/user_interface_components/kotlin_ui_dsl.html
-        return panel {
-            row() {
-                targetType()
-                target()
-            }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
+    override fun addHostFields(layout: LayoutBuilder) {
+        layout.row {
             row("Vagrant host:") { vagrantHost() }
-            row("Python interpreter:") { python() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
-            row("Vagrant command:") { vagrant() }
-            row("Local working directory:") { localWorkDir() }
         }
     }
 
     /**
-     * Reset editor fields from the configuration state.
+     * Reset host fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: input configuration
      */
-    override fun resetEditorFrom(config: VagrantRunConfiguration) {
-        config.apply {
-            target.text = settings.target
-            targetType.selectedIndex = targetTypeValues.indexOf(settings.targetType)
-            targetParams.text = settings.targetParams
-            python.text = settings.python
-            pythonOpts.text = settings.pythonOpts
-            remoteWorkDir.text = settings.remoteWorkDir
-            vagrant.text = settings.vagrant
-            vagrantHost.text = settings.vagrantHost
-            localWorkDir.text = settings.localWorkDir
+    override fun resetHostFields(config: VagrantRunConfiguration) {
+        (config.settings as VagrantSettings).let {
+            vagrantHost.text = it.vagrantHost
         }
-        return
     }
 
     /**
-     * Apply editor fields to the configuration state.
+     * Apply host fields from a configuration state.
      *
-     * @param config: run configuration
+     * @param config: output configuration
      */
-    override fun applyEditorTo(config: VagrantRunConfiguration) {
-        // This apparently gets called for every key press, so performance is
-        // critical.
-        config.apply {
-            settings = VagrantRunSettings()
-            settings.target = target.text
-            settings.targetType = targetTypeValues[targetType.selectedIndex]
-            settings.targetParams = targetParams.text
-            settings.python = python.text
-            settings.pythonOpts = pythonOpts.text
-            settings.remoteWorkDir = remoteWorkDir.text
-            settings.vagrant = vagrant.text
-            settings.vagrantHost = vagrantHost.text
-            settings.localWorkDir = localWorkDir.text
+    override fun applyHostFields(config: VagrantRunConfiguration) {
+        (config.settings as VagrantSettings).let {
+            it.vagrantHost = vagrantHost.text
         }
-        return
+    }
+
+    /**
+     *
+     */
+    override fun addExecutorFields(layout: LayoutBuilder) {
+        layout.apply {
+            row("Vagrant executable:") { vagrantExe() }
+        }
+    }
+
+    /**
+     * Reset executor fields from a configuration state.
+     *
+     * @param config: input configuration
+     */
+    override fun resetExecutorFields(config: VagrantRunConfiguration) {
+        (config.settings as VagrantSettings).let {
+            vagrantHost.text = it.vagrantHost
+        }
+    }
+
+    /**
+     * Apply executor fields from a configuration state.
+     *
+     * @param config: output configuration
+     */
+    override fun applyExecutorFields(config: VagrantRunConfiguration) {
+        (config.settings as VagrantSettings).let {
+            it.vagrantExe = vagrantExe.text
+        }
     }
 }
 
@@ -280,61 +223,37 @@ class VagrantSettingsEditor internal constructor(project: Project) :
 /**
  * Manage VagrantRunConfiguration runtime settings.
  */
-class VagrantRunSettings internal constructor() {
+class VagrantSettings() : RPythonSettings() {
 
-    companion object {
-        private const val JDOM_TAG = "python-vagrant"
-    }
+    override val xmlTagName = "rpython-vagrant"
 
-    var target = ""
-    var targetType = TargetType.SCRIPT
-    var targetParams = ""
-    var python = ""
-        get() = if (field.isNotBlank()) field else "python3"
-    var pythonOpts = ""
-    var remoteWorkDir = ""
-    var vagrant = ""
-        get() = if (field.isNotBlank()) field else "vagrant"
+    var vagrantExe = ""
+        get() = field.ifBlank { "vagrant" }
     var vagrantHost = ""
-    var localWorkDir = ""
 
     /**
-     * Construct object from a JDOM element.
+     * Load stored settings.
      *
-     * @param element: input element
+     * @param element: settings root element
      */
-    internal constructor(element: Element) : this() {
-        element.getOrCreate(JDOM_TAG).let {
-            target = JDOMExternalizerUtil.readField(it, "target", "")
-            targetType = TargetType.valueOf(JDOMExternalizerUtil.readField(it, "targetType", "SCRIPT"))
-            targetParams = JDOMExternalizerUtil.readField(it, "targetParams", "")
-            python = JDOMExternalizerUtil.readField(it, "python", "")
-            pythonOpts = JDOMExternalizerUtil.readField(it, "pythonOpts", "")
-            remoteWorkDir = JDOMExternalizerUtil.readField(it, "remoteWorkDir", "")
-            vagrant = JDOMExternalizerUtil.readField(it, "vagrant", "")
+    override fun load(element: Element) {
+        super.load(element)
+        element.getOrCreate(xmlTagName).let {
+            vagrantExe = JDOMExternalizerUtil.readField(it, "vagrantExe", "")
             vagrantHost = JDOMExternalizerUtil.readField(it, "vagrantHost", "")
-            localWorkDir = JDOMExternalizerUtil.readField(it, "localWorkDir", "")
         }
-        return
     }
 
     /**
-     * Write settings to a JDOM element.
+     * Save settings.
      *
-     * @param element: output element
+     * @param element: settings root element
      */
-    fun write(element: Element) {
-        element.getOrCreate(JDOM_TAG).let {
-            JDOMExternalizerUtil.writeField(it, "target", target)
-            JDOMExternalizerUtil.writeField(it, "targetType", targetType.name)
-            JDOMExternalizerUtil.writeField(it, "targetParams", targetParams)
-            JDOMExternalizerUtil.writeField(it, "python", python)
-            JDOMExternalizerUtil.writeField(it, "pythonOpts", pythonOpts)
-            JDOMExternalizerUtil.writeField(it, "remoteWorkDir", remoteWorkDir)
-            JDOMExternalizerUtil.writeField(it, "vagrant", vagrant)
+    override fun save(element: Element) {
+        super.save(element)
+        element.getOrCreate(xmlTagName).let {
+            JDOMExternalizerUtil.writeField(it, "vagrantExe", vagrantExe)
             JDOMExternalizerUtil.writeField(it, "vagrantHost", vagrantHost)
-            JDOMExternalizerUtil.writeField(it, "localWorkDir", localWorkDir)
         }
-        return
     }
 }
