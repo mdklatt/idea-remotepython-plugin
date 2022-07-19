@@ -36,6 +36,15 @@ class VagrantConfigurationFactory(type: RPythonConfigurationType) : RPythonConfi
             VagrantRunConfiguration(project, this, "")
 
     /**
+     * Returns the id of the run configuration that is used for serialization. For compatibility reason the default implementation calls
+     * the method {@link #getName()} and this may cause problems if {@link #getName} returns localized value. So the default implementation
+     * <strong>must be overridden</strong> in all inheritors. In existing implementations you need to use the same value which is returned
+     * by {@link #getName()} for compatibility but store it directly in the code instead of taking from a message bundle. For new configurations
+     * you may use any unique ID; if a new {@link ConfigurationType} has a single {@link ConfigurationFactory}, use {@link SimpleConfigurationType} instead.
+     */
+    override fun getId() = name  // for backwards compatibility with existing configs
+
+    /**
      * The name of the run configuration variant created by this factory.
      *
      * @return: name
