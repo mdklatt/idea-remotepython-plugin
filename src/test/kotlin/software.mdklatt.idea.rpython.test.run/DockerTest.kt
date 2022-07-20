@@ -3,9 +3,7 @@
  */
 package software.mdklatt.idea.rpython.test.run
 
-import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.getOrCreate
 import org.jdom.Element
 import software.mdklatt.idea.rpython.run.*
 
@@ -18,108 +16,7 @@ import software.mdklatt.idea.rpython.run.*
 
 
 /**
- * Unit tests for the DockerRunSettings class.
- */
-internal class DockerSettingsTest : BasePlatformTestCase() {
-
-    private lateinit var settings: DockerSettings
-    private lateinit var element: Element
-
-    /**
-     * Per-test initialization.
-     */
-    override fun setUp() {
-        super.setUp()
-        settings = DockerSettings().apply {
-            targetType = TargetType.MODULE
-            targetName = "pymod"
-            targetParams = "-w INFO"
-            pythonExe = "python3.7"
-            pythonOpts = "one \"two\""
-            remoteWorkDir = "abc/"
-            dockerExe = "/usr/local/bin/docker"
-            dockerOpts = "one \"two\""
-            dockerCompose = "docker-compose.yml"
-            hostName = "ubuntu:20.04"
-            hostType = DockerHostType.IMAGE
-            localWorkDir = "/home/ubuntu"
-        }
-        element = Element("configuration")
-    }
-
-    /**
-     * Test the constructor.
-     */
-    fun testConstructor() {
-        DockerSettings().apply {
-            assertEquals(TargetType.SCRIPT, targetType)
-            assertEquals("", targetName)
-            assertEquals("", targetParams)
-            assertEquals("python3", pythonExe)
-            assertEquals("", pythonOpts)
-            assertEquals("", remoteWorkDir)
-            assertEquals("docker", dockerExe)
-            assertEquals("", dockerOpts)
-            assertEquals("", dockerCompose)
-            assertEquals("", hostName)
-            assertEquals(DockerHostType.IMAGE, hostType)
-            assertEquals("", localWorkDir)
-        }
-    }
-
-    /**
-     * Test round-trip write/read of settings.
-     */
-    fun testPersistence() {
-        settings.save(element)
-        element.getOrCreate(settings.xmlTagName).let {
-            assertTrue(JDOMExternalizerUtil.readField(it, "id", "").isNotEmpty())
-        }
-        DockerSettings().apply {
-            load(element)
-            assertEquals(targetType, settings.targetType)
-            assertEquals(targetName, settings.targetName)
-            assertEquals(targetParams, settings.targetParams)
-            assertEquals(pythonExe, settings.pythonExe)
-            assertEquals(pythonOpts, settings.pythonOpts)
-            assertEquals(remoteWorkDir, settings.remoteWorkDir)
-            assertEquals(dockerExe, settings.dockerExe)
-            assertEquals(dockerOpts, settings.dockerOpts)
-            assertEquals(dockerCompose, settings.dockerCompose)
-            assertEquals(hostName, settings.hostName)
-            assertEquals(hostType, settings.hostType)
-            assertEquals(localWorkDir, settings.localWorkDir)
-        }
-    }
-
-    /**
-     * Test the `pythonExe` attribute default value.
-     */
-    fun testPythonExeDefault() {
-        DockerSettings().apply {
-            pythonExe = ""
-            assertEquals("python3", pythonExe)
-            pythonExe = "abc"
-            assertEquals("abc", pythonExe)
-        }
-    }
-
-    /**
-     * Test the `dockerExe` attribute default value.
-     */
-    fun testDockerExeDefault() {
-        DockerSettings().apply {
-            dockerExe = ""
-            assertEquals("docker", dockerExe)
-            dockerExe = "abc"
-            assertEquals("abc", dockerExe)
-        }
-    }
-}
-
-
-/**
- * Unit tests for the DockerConfigurationFactory class.
+ * Unit tests for the DonckerConfigurationFactory class.
  */
 internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
 
@@ -134,10 +31,14 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
     }
 
     /**
-     * Test the `name` property.
+     * Test the testCreateTemplateConfiguration() method.
      */
-    fun testName() {
-        assertEquals("Docker Host", factory.name)
+    fun testCreateTemplateConfiguration() {
+        // Just a smoke test to ensure that the expected RunConfiguration type
+        // is returned.
+        factory.createTemplateConfiguration(project).let {
+            assertTrue(it.dockerExe.isNotBlank())
+        }
     }
 }
 
@@ -147,102 +48,97 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
  */
 internal class DockerRunConfigurationTest : BasePlatformTestCase() {
 
+    private lateinit var factory: DockerConfigurationFactory
     private lateinit var config: DockerRunConfiguration
-    private lateinit var element: Element
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        val factory = DockerConfigurationFactory(RPythonConfigurationType())
+        factory = DockerConfigurationFactory(RPythonConfigurationType())
         config = DockerRunConfiguration(project, factory, "Docker Python Test")
-        element = Element("configuration")
-        element.getOrCreate(config.settings.xmlTagName).let {
-            JDOMExternalizerUtil.writeField(it, "targetName", "script.py")
-            JDOMExternalizerUtil.writeField(it, "pythonExe", "python")
-        }
     }
 
     /**
      * Test the primary constructor.
      */
     fun testConstructor() {
-        assertEquals("Docker Python Test", config.name)
-    }
-
-    /**
-     * Test the readExternal() method.
-     */
-    fun testReadExternal() {
-        (config.settings as DockerSettings).let {
-            config.readExternal(element)
-            assertEquals("script.py", it.targetName)
-            assertEquals("python", it.pythonExe)
+        config.let {
+            assertEquals(TargetType.MODULE, it.targetType)
+            assertEquals("", it.targetName)
+            assertEquals("", it.targetParams)
+            assertEquals("python3", it.pythonExe)
             assertEquals("", it.pythonOpts)
+            assertEquals("", it.localWorkDir)
+            assertEquals("", it.remoteWorkDir)
             assertEquals(DockerHostType.IMAGE, it.hostType)
+            assertEquals("", it.hostName)
+            assertEquals("docker", it.dockerExe)
+            assertEquals("", it.dockerOpts)
+            assertEquals("", it.dockerCompose)
         }
     }
 
     /**
-     * Test the writeExternal() method.
+     * Test round-trip write/read of configuration settings.
      */
-    fun testWriteExternal() {
-        config.writeExternal(element)
-        element.getOrCreate(config.settings.xmlTagName).let {
-            assertTrue(JDOMExternalizerUtil.readField(it, "id", "").isNotEmpty())
+    fun testPersistence() {
+        val element = Element("configuration")
+        config.let {
+            it.targetType = TargetType.SCRIPT
+            it.targetName = "app.py"
+            it.targetParams = "-h"
+            it.pythonExe = "/bin/python"
+            it.pythonOpts = "-v"
+            it.localWorkDir = "./"
+            it.remoteWorkDir = "/tmp"
+            it.hostType = DockerHostType.SERVICE
+            it.hostName = "app"
+            it.dockerExe = "/bin/docker"
+            it.dockerOpts = "--rm"
+            it.dockerCompose = "compose.yml"
+            it.writeExternal(element)
+        }
+        DockerRunConfiguration(project, factory, "Persistence Test").let {
+            it.readExternal(element)
+            assertEquals(config.targetType, it.targetType)
+            assertEquals(config.targetName, it.targetName)
+            assertEquals(config.targetParams, it.targetParams)
+            assertEquals(config.pythonExe, it.pythonExe)
+            assertEquals(config.pythonOpts, it.pythonOpts)
+            assertEquals(config.localWorkDir, it.localWorkDir)
+            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.dockerExe, it.dockerExe)
+            assertEquals(config.dockerOpts, it.dockerOpts)
+            assertEquals(config.dockerCompose, it.dockerCompose)
         }
     }
 }
 
 
 /**
- * Unit tests for the DockerSettingsEditor class.
+ * Unit tests for the DockerEditor class.
  */
-internal class DockerSettingsEditorTest : BasePlatformTestCase() {
+internal class DockerEditorTest : BasePlatformTestCase() {
 
-    private val factory = DockerConfigurationFactory(RPythonConfigurationType())
-    private lateinit var config: DockerRunConfiguration
-    private lateinit var editor: DockerSettingsEditor
+    private lateinit var editor: DockerEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        config = factory.createTemplateConfiguration(project)
-        editor = DockerSettingsEditor(project)
-        val settings = config.settings as DockerSettings
-        settings.apply {
-            pythonExe = "/bin/python"
-            hostName = "image:latest"
-            hostType = DockerHostType.IMAGE
-        }
+        editor = DockerEditor(project)
     }
 
-    /**
-     * Test default editor settings
-     */
-    fun testDefault() {
-        editor.applyTo(config)
-        (config.settings as DockerSettings).apply {
-            assertEquals("python3", pythonExe)
-            assertEquals("docker", dockerExe)
-        }
-
-    }
+    // TODO: https://github.com/JetBrains/intellij-ui-test-robot
 
     /**
-     * Test round-trip set/get of editor fields.
+     * Test the primary constructor.
      */
-    fun testEditor() {
-        editor.resetFrom(config)
-        config.settings = (config.factory as DockerConfigurationFactory).createSettings()
-        editor.applyTo(config)
-        (config.settings as DockerSettings).apply {
-            assertEquals("/bin/python", pythonExe)
-            assertEquals("image:latest", hostName)
-            assertEquals(DockerHostType.IMAGE, hostType)
-        }
+    fun testConstructor() {
+        // Just a smoke test.
+        assertNotNull(editor.component)
     }
 }
