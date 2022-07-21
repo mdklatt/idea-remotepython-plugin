@@ -1,11 +1,9 @@
 /**
- * Unit tests for the Remote module.
+ * Unit tests for the SecureShell module.
  */
 package software.mdklatt.idea.rpython.test.run
 
-import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.getOrCreate
 import org.jdom.Element
 import software.mdklatt.idea.rpython.run.*
 
@@ -18,9 +16,9 @@ import software.mdklatt.idea.rpython.run.*
 
 
 /**
- * Unit tests for the RemoteConfigurationFactory class.
+ * Unit tests for the SecureShellConfigurationFactory class.
  */
-class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
+internal class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
 
     private lateinit var factory: SecureShellConfigurationFactory
 
@@ -33,154 +31,113 @@ class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
     }
 
     /**
-     * Test the name property.
+     * Test the testCreateTemplateConfiguration() method.
      */
-    fun testName() {
-        assertEquals("SSH Host", factory.name)
+    fun testCreateTemplateConfiguration() {
+        // Just a smoke test to ensure that the expected RunConfiguration type
+        // is returned.
+        factory.createTemplateConfiguration(project).let {
+            assertTrue(it.sshExe.isNotBlank())
+        }
     }
 }
 
 
 /**
- * Unit tests for the RemoteRunSettings class.
+ * Unit tests for the SecureShellRunConfiguration class.
  */
-class SecureShellSettingsTest : BasePlatformTestCase() {
+internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
 
-    private lateinit var settings: SecureShellSettings
-    private lateinit var element: Element
+    private lateinit var factory: SecureShellConfigurationFactory
+    private lateinit var config: SecureShellRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        settings = SecureShellSettings().apply {
-            targetType = TargetType.MODULE
-            targetName = "pymod"
-            targetParams = "-w INFO"
-            pythonExe = "python3.7"
-            pythonOpts = "one \"two\""
-            remoteWorkDir = "abc/"
-            sshExe = "/bin/ssh"
-            sshOpts= "-v"
-            sshUser = "user"
-            sshHost = "example.com"
-            localWorkDir = "/home/user"
-        }
-        element = Element("configuration")
+        factory = SecureShellConfigurationFactory(RPythonConfigurationType())
+        config = SecureShellRunConfiguration(project, factory, "SecureShell Python Test")
     }
 
     /**
      * Test the primary constructor.
      */
     fun testConstructor() {
-        SecureShellSettings().apply {
-            assertEquals(TargetType.SCRIPT, targetType)
-            assertEquals("", targetName)
-            assertEquals("", targetParams)
-            assertEquals("python3", pythonExe)
-            assertEquals("", pythonOpts)
-            assertEquals("", remoteWorkDir)
-            assertEquals("ssh", sshExe)
-            assertEquals("", sshUser)
-            assertEquals("", sshHost)
-            assertEquals("", localWorkDir)
+        config.let {
+            assertEquals(TargetType.MODULE, it.targetType)
+            assertEquals("", it.targetName)
+            assertEquals("", it.targetParams)
+            assertEquals("python3", it.pythonExe)
+            assertEquals("", it.pythonOpts)
+            assertEquals("", it.localWorkDir)
+            assertEquals("", it.remoteWorkDir)
+            assertEquals("", it.hostName)
+            assertEquals("", it.hostUser)
+            assertEquals("ssh", it.sshExe)
+            assertEquals("", it.sshOpts)
         }
     }
 
     /**
-     * Test round-trip write/read of settings.
+     * Test round-trip write/read of configuration settings.
      */
     fun testPersistence() {
-        settings.save(element)
-        element.getOrCreate(settings.xmlTagName).let {
-            assertTrue(JDOMExternalizerUtil.readField(it, "id", "").isNotEmpty())
+        val element = Element("configuration")
+        config.let {
+            it.targetType = TargetType.SCRIPT
+            it.targetName = "app.py"
+            it.targetParams = "-h"
+            it.pythonExe = "/bin/python"
+            it.pythonOpts = "-v"
+            it.localWorkDir = "./"
+            it.remoteWorkDir = "/tmp"
+            it.hostName = "app"
+            it.hostUser = "dave"
+            it.sshExe = "/bin/ssh"
+            it.sshOpts = "-v"
+            it.writeExternal(element)
         }
-        SecureShellSettings().apply {
-            load(element)
-            assertEquals(targetType, settings.targetType)
-            assertEquals(targetName, settings.targetName)
-            assertEquals(targetParams, settings.targetParams)
-            assertEquals(pythonExe, settings.pythonExe)
-            assertEquals(pythonOpts, settings.pythonOpts)
-            assertEquals(remoteWorkDir, settings.remoteWorkDir)
-            assertEquals(sshExe, settings.sshExe)
-            assertEquals(sshOpts, settings.sshOpts)
-            assertEquals(sshHost, settings.sshHost)
-            assertEquals(sshUser, settings.sshUser)
-            assertEquals(localWorkDir, settings.localWorkDir)
-        }
-    }
-
-     /**
-     * Test the pythonExe property.
-     */
-    fun testPythonExeDefault() {
-        SecureShellSettings().apply {
-            pythonExe = ""
-            assertEquals("python3", pythonExe)
-            pythonExe = "abc"
-            assertEquals("abc", pythonExe)
-        }
-    }
-
-    /**
-     * Test the sshExe property.
-     */
-    fun testSshExeDefault() {
-        SecureShellSettings().apply {
-            sshExe = ""
-            assertEquals("ssh", sshExe)
-            sshExe = "abc"
-            assertEquals("abc", sshExe)
+        SecureShellRunConfiguration(project, factory, "Persistence Test").let {
+            it.readExternal(element)
+            assertEquals(config.targetType, it.targetType)
+            assertEquals(config.targetName, it.targetName)
+            assertEquals(config.targetParams, it.targetParams)
+            assertEquals(config.pythonExe, it.pythonExe)
+            assertEquals(config.pythonOpts, it.pythonOpts)
+            assertEquals(config.localWorkDir, it.localWorkDir)
+            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.hostName, it.hostName)
+            assertEquals(config.hostUser, it.hostUser)
+            assertEquals(config.sshExe, it.sshExe)
+            assertEquals(config.sshOpts, it.sshOpts)
         }
     }
 }
 
 
 /**
- * Unit tests for the SecureShellSettingsEditor class.
+ * Unit tests for the SecureShellEditor class.
  */
-internal class SecureShellSettingsEditorTest : BasePlatformTestCase() {
+internal class SecureShellEditorTest : BasePlatformTestCase() {
 
-    private val factory = SecureShellConfigurationFactory(RPythonConfigurationType())
-    private lateinit var config: SecureShellRunConfiguration
-    private lateinit var editor: SecureShellSettingsEditor
+    private lateinit var editor: SecureShellEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        config = factory.createTemplateConfiguration(project)
-        editor = SecureShellSettingsEditor(project)
-        val settings = config.settings as SecureShellSettings
-        settings.apply {
-            sshHost = "example.com"
-        }
+        editor = SecureShellEditor(project)
     }
 
-    /**
-     * Test default editor settings
-     */
-    fun testDefault() {
-        editor.applyTo(config)
-        (config.settings as SecureShellSettings).apply {
-            assertEquals("python3", pythonExe)
-            assertEquals("ssh", sshExe)
-        }
-
-    }
+    // TODO: https://github.com/JetBrains/intellij-ui-test-robot
 
     /**
-     * Test round-trip set/get of editor fields.
+     * Test the primary constructor.
      */
-    fun testEditor() {
-        editor.resetFrom(config)
-        config.settings = (config.factory as SecureShellConfigurationFactory).createSettings()
-        editor.applyTo(config)
-        (config.settings as SecureShellSettings).apply {
-            assertEquals("example.com", sshHost)
-        }
+    fun testConstructor() {
+        // Just a smoke test.
+        assertNotNull(editor.component)
     }
 }

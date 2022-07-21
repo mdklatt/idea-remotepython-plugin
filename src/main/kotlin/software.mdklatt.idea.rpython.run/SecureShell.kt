@@ -1,3 +1,6 @@
+/**
+ * Run Python on an SSH host.
+ */
 package software.mdklatt.idea.rpython.run
 
 import com.intellij.execution.Executor
@@ -6,31 +9,30 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.LayoutBuilder
-import com.intellij.util.getOrCreate
+import com.intellij.ui.layout.panel
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonEditor
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonOptions
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonRunConfiguration
+import javax.swing.JComponent
 import javax.swing.JTextField
-import org.jdom.Element
 
 
 /**
- * Generate SecureShellRunConfigurations.
+ * Create a run configuration instance.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class SecureShellConfigurationFactory(type: RPythonConfigurationType) : RPythonConfigurationFactory(type) {
+class SecureShellConfigurationFactory(type: RPythonConfigurationType) : ConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
      * @param project the project in which the run configuration will be used
-     * @return the run configuration instance.
+     * @return the run configuration instance
      */
-    override fun createTemplateConfiguration(project: Project) =
-            SecureShellRunConfiguration(project, this, "")
+    override fun createTemplateConfiguration(project: Project) = SecureShellRunConfiguration(project, this, "")
 
     /**
      * Returns the id of the run configuration that is used for serialization. For compatibility reason the default implementation calls
@@ -39,7 +41,7 @@ class SecureShellConfigurationFactory(type: RPythonConfigurationType) : RPythonC
      * by {@link #getName()} for compatibility but store it directly in the code instead of taking from a message bundle. For new configurations
      * you may use any unique ID; if a new {@link ConfigurationType} has a single {@link ConfigurationFactory}, use {@link SimpleConfigurationType} instead.
      */
-    override fun getId() = name  // for backwards compatibility with existing configs
+    override fun getId() = "RemotePythonSecureShellConfiguration"
 
     /**
      * The name of the run configuration variant created by this factory.
@@ -48,29 +50,29 @@ class SecureShellConfigurationFactory(type: RPythonConfigurationType) : RPythonC
      */
     override fun getName() = "SSH Host"
 
-    /**
-     * Create a new settings object for the run configuration.
-     */
-    override fun createSettings() = SecureShellSettings()
+    override fun getOptionsClass() = SecureShellOptions::class.java
+}
+
+/**
+ * Handle persistence of run configuration options.
+ *
+ * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-configurationfactory">Run Configurations Tutorial</a>
+ */
+class SecureShellOptions : RemotePythonOptions() {
+    internal var hostName by string()
+    internal var hostUser by string()
+    internal var sshExe by string()
+    internal var sshOpts by string()
 }
 
 
 /**
- * Run Configuration for executing <a href="https://docs.ansible.com/ansible/latest/cli/ansible-galaxy.html">ansible-galaxy</a>.
+ * Run Configuration for executing Python via SSH.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class SecureShellRunConfiguration internal constructor(project: Project, factory: SecureShellConfigurationFactory, name: String) :
-        RPythonRunConfiguration(project, factory,  name) {
-    /**
-     * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
-     * returned from this method may also implement [com.intellij.execution.impl.CheckableRunConfigurationEditor]. The returned object
-     * can also implement [com.intellij.openapi.options.SettingsEditorGroup] if the settings it provides need to be displayed in
-     * multiple tabs.
-     *
-     * @return the settings editor component.
-     */
-    override fun getConfigurationEditor() = SecureShellSettingsEditor(project)
+class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
+    RemotePythonRunConfiguration<SecureShellOptions>(project, factory, name) {
 
     /**
      * Prepares for executing a specific instance of the run configuration.
@@ -79,8 +81,38 @@ class SecureShellRunConfiguration internal constructor(project: Project, factory
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) =
-            SecureShellCommandLineState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = SecureShellState(this, environment)
+
+    /**
+     * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
+     * returned from this method may also implement [com.intellij.execution.impl.CheckableRunConfigurationEditor]. The returned object
+     * can also implement [com.intellij.openapi.options.SettingsEditorGroup] if the settings it provides need to be displayed in
+     * multiple tabs.
+     *
+     * @return the settings editor component.
+     */
+    override fun getConfigurationEditor() = SecureShellEditor(project)
+
+    var hostName: String
+        get() = options.hostName ?: ""
+        set(value) {
+            options.hostName = value
+        }
+    var hostUser: String
+        get() = options.hostUser ?: ""
+        set(value) {
+            options.hostUser = value
+        }
+    var sshExe: String
+        get() = options.sshExe ?: "ssh"
+        set(value) {
+            options.sshExe = value.ifBlank { "ssh" }
+        }
+    var sshOpts: String
+        get() = options.sshOpts ?: ""
+        set(value) {
+            options.sshOpts = value
+        }
 }
 
 
@@ -88,32 +120,30 @@ class SecureShellRunConfiguration internal constructor(project: Project, factory
  * Command line process for executing the run configuration.
  *
  * @param config: run configuration
- * @param environ: execution environment
+ * @param environment: execution environment
+ * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class SecureShellCommandLineState internal constructor(private val config: SecureShellRunConfiguration, environ: ExecutionEnvironment) :
-        CommandLineState(environ) {
+class SecureShellState internal constructor(private val config: SecureShellRunConfiguration, environment: ExecutionEnvironment) :
+    CommandLineState(environment) {
     /**
      * Starts the process.
      *
      * @return the handler for the running process
-     * @throws ExecutionException if the execution failed.
      * @see GeneralCommandLine
-     *
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val settings = config.settings as SecureShellSettings
-        val command = PosixCommandLine(settings.sshExe)
-        if (settings.sshOpts.isNotBlank()) {
-            command.addParameters(PosixCommandLine.split(settings.sshOpts))
+        val command = PosixCommandLine(config.sshExe)
+        if (config.sshOpts.isNotBlank()) {
+            command.addParameters(PosixCommandLine.split(config.sshOpts))
         }
-        var host = settings.sshHost
-        if (settings.sshUser.isNotBlank()) {
-            host = settings.sshUser + "@" + host
+        var host = config.hostName
+        if (config.hostUser.isNotBlank()) {
+            host = config.hostUser + "@" + host
         }
-        command.addParameters(host, python(settings))
-        if (settings.localWorkDir.isNotBlank()) {
-            command.setWorkDirectory(settings.localWorkDir)
+        command.addParameters(host, python())
+        if (config.localWorkDir.isNotBlank()) {
+            command.setWorkDirectory(config.localWorkDir)
         }
         if (!command.environment.contains("TERM")) {
             command.environment["TERM"] = "xterm-256color"
@@ -128,21 +158,21 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
      *
      * @return: Python command string
      */
-    private fun python(settings: SecureShellSettings): String {
-        // TODO: Identical to VagrantCommandLineState except for parameter type.
+    private fun python(): String {
+        // TODO: Identical to VagrantState.
         val command = PosixCommandLine().apply {
-            if (settings.remoteWorkDir.isNotBlank()) {
+            if (config.remoteWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(settings.remoteWorkDir, "&&", settings.pythonExe)
+                addParameters(config.remoteWorkDir, "&&", config.pythonExe)
             }
             else {
-                withExePath(settings.pythonExe)
+                withExePath(config.pythonExe)
             }
-            if (settings.targetType == TargetType.MODULE) {
+            if (config.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
-            addParameter(settings.targetName)
-            addParameters(PosixCommandLine.split(settings.targetParams))
+            addParameter(config.targetName)
+            addParameters(PosixCommandLine.split(config.targetParams))
         }
         return command.commandLineString
     }
@@ -150,131 +180,73 @@ class SecureShellCommandLineState internal constructor(private val config: Secur
 
 
 /**
- * UI component for SSH Run Configuration settings.
+ * UI component for setting run configuration options.
  *
- * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#settings-editor">Settings Editor</a>
+ * @param project: the project in which the run configuration will be used
+ * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class SecureShellSettingsEditor internal constructor(project: Project) :
-        RPythonSettingsEditor<SecureShellRunConfiguration>(project) {
+class SecureShellEditor internal constructor(project: Project) :
+    RemotePythonEditor<SecureShellOptions, SecureShellRunConfiguration>(project) {
 
-    var sshExe = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener("SSH Command", "", project,
-                FileChooserDescriptorFactory.createSingleFileDescriptor())
+    private var hostName = JTextField()
+    private var hostUser = JTextField()
+    private var sshExe = TextFieldWithBrowseButton().also {
+        it.addBrowseFolderListener("SecureShell Executable", "", project, fileChooser)
     }
-    var sshHost = JTextField()
-    var sshOpts = RawCommandLineEditor()
-    var sshUser = JTextField()
+    private var sshOpts = RawCommandLineEditor()
 
     /**
+     * Update UI component with options from configuration.
      *
+     * @param config: run configuration
      */
-    override fun addHostFields(layout: LayoutBuilder) {
-        layout.row {
-            row("Remote host:") { sshHost() }
-            row("Remote user:") { sshUser() }
-        }
-    }
-
-    /**
-     * Reset host fields from a configuration state.
-     *
-     * @param config: input configuration
-     */
-    override fun resetHostFields(config: SecureShellRunConfiguration) {
-        (config.settings as SecureShellSettings).let {
-            sshHost.text = it.sshHost
-            sshUser.text = it.sshUser
-        }
-    }
-
-    /**
-     * Apply host fields from a configuration state.
-     *
-     * @param config: output configuration
-     */
-    override fun applyHostFields(config: SecureShellRunConfiguration) {
-        (config.settings as SecureShellSettings).let {
-            it.sshHost = sshHost.text
-            it.sshUser = sshUser.text
-        }
-    }
-
-    /**
-     *
-     */
-    override fun addExecutorFields(layout: LayoutBuilder) {
-        layout.apply {
-            row("SSH executable:") { sshExe() }
-            row("SSH options:") { sshOpts() }
-        }
-    }
-
-    /**
-     * Reset executor fields from a configuration state.
-     *
-     * @param config: input configuration
-     */
-    override fun resetExecutorFields(config: SecureShellRunConfiguration) {
-        (config.settings as SecureShellSettings).let {
+    override fun resetEditorFrom(config: SecureShellRunConfiguration) {
+        super.resetEditorFrom(config)
+        config.let {
+            hostName.text = it.hostName
+            hostUser.text = it.hostUser
             sshExe.text = it.sshExe
             sshOpts.text = it.sshOpts
         }
     }
 
     /**
-     * Apply executor fields from a configuration state.
+     * Update configuration with options from UI.
      *
-     * @param config: output configuration
+     * @param config: run configuration
      */
-    override fun applyExecutorFields(config: SecureShellRunConfiguration) {
-        (config.settings as SecureShellSettings).let {
+    override fun applyEditorTo(config: SecureShellRunConfiguration) {
+        super.applyEditorTo(config)
+        config.let {
+            it.hostName = hostName.text
+            it.hostUser = hostUser.text
             it.sshExe = sshExe.text
             it.sshOpts = sshOpts.text
         }
     }
-}
-
-
-/**
- * Manage SecureShellRunConfiguration runtime settings.
- */
-class SecureShellSettings : RPythonSettings() {
-
-    override val xmlTagName = "rpython-ssh"
-
-    var sshExe = ""
-        get() = field.ifBlank { "ssh" }
-    var sshHost = ""
-    var sshUser = ""
-    var sshOpts = ""
 
     /**
-     * Load stored settings.
+     * Create the UI component.
      *
-     * @param element: settings root element
+     * @return Swing component
      */
-    override fun load(element: Element) {
-        super.load(element)
-        element.getOrCreate(xmlTagName).let {
-            sshExe = JDOMExternalizerUtil.readField(it, "sshExe", "")
-            sshOpts = JDOMExternalizerUtil.readField(it, "sshOpts", "")
-            sshHost = JDOMExternalizerUtil.readField(it, "sshHost", "")
-            sshUser = JDOMExternalizerUtil.readField(it, "sshUser", "")
-        }
-    }
-
-    /**
-     * Save settings.
-     *
-     * @param element: settings root element
-     */
-    override fun save(element: Element) {
-        super.save(element)
-        element.getOrCreate(xmlTagName).let {
-            JDOMExternalizerUtil.writeField(it, "sshExe", sshExe)
-            JDOMExternalizerUtil.writeField(it, "sshHost", sshHost)
-            JDOMExternalizerUtil.writeField(it, "sshUser", sshUser)
-            JDOMExternalizerUtil.writeField(it, "sshOpts", sshOpts)
+    override fun createEditor(): JComponent {
+        return panel {
+            row() {
+                targetType()
+                targetName()
+            }
+            row("Parameters:") { targetParams() }
+            titledRow("Remote Environment") {}
+            row("Remote host:") { hostName() }
+            row("Remote user:") { hostUser() }
+            row("Python interpreter:") { pythonExe() }
+            row("Python options:") { pythonOpts() }
+            row("Remote working directory:") { remoteWorkDir() }
+            titledRow("Local Environment") {}
+            row("SSH executable:") { sshExe() }
+            row("SSH options:") { sshOpts() }
+            row("Local working directory:") { localWorkDir() }
         }
     }
 }

@@ -109,6 +109,8 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
             assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.hostType, it.hostType)
+            assertEquals(config.hostName, it.hostName)
             assertEquals(config.dockerExe, it.dockerExe)
             assertEquals(config.dockerOpts, it.dockerOpts)
             assertEquals(config.dockerCompose, it.dockerCompose)

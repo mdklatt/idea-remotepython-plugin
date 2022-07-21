@@ -105,6 +105,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
             assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.hostName, it.hostName)
             assertEquals(config.vagrantExe, it.vagrantExe)
             assertEquals(config.vagrantOpts, it.vagrantOpts)
         }
