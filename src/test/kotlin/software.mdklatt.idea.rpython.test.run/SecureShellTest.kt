@@ -27,7 +27,7 @@ internal class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = SecureShellConfigurationFactory(RPythonConfigurationType())
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -56,7 +56,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = SecureShellConfigurationFactory(RPythonConfigurationType())
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
         config = SecureShellRunConfiguration(project, factory, "SecureShell Python Test")
     }
 

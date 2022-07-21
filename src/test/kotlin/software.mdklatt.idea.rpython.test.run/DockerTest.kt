@@ -27,7 +27,7 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = DockerConfigurationFactory(RPythonConfigurationType())
+        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -56,7 +56,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = DockerConfigurationFactory(RPythonConfigurationType())
+        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
         config = DockerRunConfiguration(project, factory, "Docker Python Test")
     }
 

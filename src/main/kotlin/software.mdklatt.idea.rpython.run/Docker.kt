@@ -14,9 +14,6 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.RawCommandLineEditor
 import com.intellij.ui.layout.panel
-import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonEditor
-import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonOptions
-import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonRunConfiguration
 import javax.swing.JComponent
 import javax.swing.JTextField
 
@@ -26,7 +23,7 @@ import javax.swing.JTextField
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class DockerConfigurationFactory(type: RPythonConfigurationType) : ConfigurationFactory(type) {
+class DockerConfigurationFactory(type: RemotePythonConfigurationType) : ConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *

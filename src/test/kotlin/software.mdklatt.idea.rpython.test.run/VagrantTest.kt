@@ -27,7 +27,7 @@ internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RPythonConfigurationType())
+        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -56,7 +56,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RPythonConfigurationType())
+        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
         config = VagrantRunConfiguration(project, factory, "Vagrant Python Test")
     }
 
