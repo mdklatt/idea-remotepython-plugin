@@ -9,14 +9,12 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.RawCommandLineEditor
 import com.intellij.ui.layout.panel
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonEditor
 import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonOptions
 import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonRunConfiguration
 import javax.swing.JComponent
@@ -102,8 +100,6 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      * @return the settings editor component.
      */
     override fun getConfigurationEditor() = DockerEditor(project)
-
-    // TODO: Why can't options.<property> be used as a delegate?
 
     var hostType: DockerHostType
         get() = DockerHostType.valueOf(options.hostType ?: "IMAGE")
@@ -206,36 +202,22 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
 
 
 /**
- * UI component for setting run configuration options
+ * UI component for setting run configuration options.
  *
  * @param project: the project in which the run configuration will be used
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
 class DockerEditor internal constructor(project: Project) :
-    SettingsEditor<DockerRunConfiguration>() {
+    RemotePythonEditor<DockerOptions, DockerRunConfiguration>(project) {
 
     companion object {
-        val targetTypeOptions = mapOf(
-            TargetType.SCRIPT to "Script path:",
-            TargetType.MODULE to "Module name:",
-        )
         val hostTypeOptions = mapOf(
             DockerHostType.CONTAINER to "Container name:",
             DockerHostType.IMAGE to "Image label:",
             DockerHostType.SERVICE to "Compose service:",
         )
-        val fileChooser: FileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
     }
 
-    private var targetType = ComboBox(targetTypeOptions.values.toTypedArray())
-    private var targetName = JTextField()
-    private var targetParams = RawCommandLineEditor()
-    private var pythonExe = JTextField()
-    private var pythonOpts = RawCommandLineEditor()
-    private var remoteWorkDir = JTextField()
-    private var localWorkDir = TextFieldWithBrowseButton().also {
-        it.addBrowseFolderListener("Local Working Directory", "", project, fileChooser)
-    }
     private var hostType = ComboBox(hostTypeOptions.values.toTypedArray())
     private var hostName = JTextField()
     private var dockerExe = TextFieldWithBrowseButton().also {
@@ -247,15 +229,14 @@ class DockerEditor internal constructor(project: Project) :
     }
     private var dockerOpts = RawCommandLineEditor()
 
+    /**
+     * Update UI component with options from configuration.
+     *
+     * @param config: run configuration
+     */
     override fun resetEditorFrom(config: DockerRunConfiguration) {
+        super.resetEditorFrom(config)
         config.let {
-            targetType.selectedItem = targetTypeOptions[it.targetType]
-            targetName.text = it.targetName
-            targetParams.text = it.targetParams
-            pythonExe.text = it.pythonExe
-            pythonOpts.text = it.pythonOpts
-            remoteWorkDir.text = it.remoteWorkDir
-            localWorkDir.text = it.localWorkDir
             hostType.selectedItem = hostTypeOptions[it.hostType]
             hostName.text = it.hostName
             dockerExe.text = it.dockerExe
@@ -264,15 +245,14 @@ class DockerEditor internal constructor(project: Project) :
         }
     }
 
+    /**
+     * Update configuration with options from UI.
+     *
+     * @param config: run configuration
+     */
     override fun applyEditorTo(config: DockerRunConfiguration) {
+        super.applyEditorTo(config)
         config.let {
-            it.targetName = targetName.text
-            it.targetType = targetTypeOptions.getKey(targetType.selectedItem)
-            it.targetParams = targetParams.text
-            it.pythonExe = pythonExe.text
-            it.pythonOpts = pythonOpts.text
-            it.remoteWorkDir = remoteWorkDir.text
-            it.localWorkDir = localWorkDir.text
             it.hostType = hostTypeOptions.getKey(hostType.selectedItem)
             it.hostName = hostName.text
             it.dockerExe = dockerExe.text
@@ -281,6 +261,11 @@ class DockerEditor internal constructor(project: Project) :
         }
     }
 
+    /**
+     * Create the UI component.
+     *
+     * @return Swing component
+     */
     override fun createEditor(): JComponent {
         return panel {
             row() {
