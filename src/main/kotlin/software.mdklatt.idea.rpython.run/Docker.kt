@@ -17,7 +17,8 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.RawCommandLineEditor
 import com.intellij.ui.layout.panel
-import java.awt.event.ItemEvent
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonOptions
+import software.mdklatt.idea.rpython.run.software.mdklatt.idea.rpython.run.RemotePythonRunConfiguration
 import javax.swing.JComponent
 import javax.swing.JTextField
 
@@ -62,18 +63,11 @@ enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
 
 
 /**
- * Handles persistence of run configuration options.
+ * Handle persistence of run configuration options.
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-configurationfactory">Run Configurations Tutorial</a>
  */
-class DockerOptions : RunConfigurationOptions() {
-    internal var targetType by string()
-    internal var targetName by string()
-    internal var targetParams by string()
-    internal var pythonExe by string()
-    internal var pythonOpts by string()
-    internal var remoteWorkDir by string()
-    internal var localWorkDir by string()
+class DockerOptions : RemotePythonOptions() {
     internal var hostType by string()
     internal var hostName by string()
     internal var dockerExe by string()
@@ -83,16 +77,12 @@ class DockerOptions : RunConfigurationOptions() {
 
 
 /**
- * Run Configuration for executing Python using <a href="https://www.docker.com">Docker</a>.
+ * Run Configuration for executing Python in a <a href="https://www.docker.com">Docker</a> container.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
 class DockerRunConfiguration(project: Project, factory: DockerConfigurationFactory, name: String) :
-    RunConfigurationBase<DockerOptions>(project, factory, name) {
-
-    override fun getOptions(): DockerOptions {
-        return super.getOptions() as DockerOptions
-    }
+    RemotePythonRunConfiguration<DockerOptions>(project, factory, name) {
 
     /**
      * Prepares for executing a specific instance of the run configuration.
@@ -115,41 +105,6 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
 
     // TODO: Why can't options.<property> be used as a delegate?
 
-    var targetType: TargetType
-        get() = TargetType.valueOf(options.targetType ?: "MODULE")
-        set(value) {
-            options.targetType = value.name
-        }
-    var targetName: String
-        get() = options.targetName ?: ""
-        set(value) {
-            options.targetName = value
-        }
-    var targetParams: String
-        get() = options.targetParams ?: ""
-        set(value) {
-            options.targetParams = value
-        }
-    var pythonExe: String
-        get() = options.pythonExe ?: "python3"
-        set(value) {
-            options.pythonExe = value.ifBlank { "python3" }
-        }
-    var pythonOpts: String
-        get() = options.pythonOpts ?: ""
-        set(value) {
-            options.pythonOpts = value
-        }
-    var remoteWorkDir: String
-        get() = options.remoteWorkDir ?: ""
-        set(value) {
-            options.remoteWorkDir = value
-        }
-    var localWorkDir: String
-        get() = options.localWorkDir ?: ""
-        set(value) {
-            options.localWorkDir = value
-        }
     var hostType: DockerHostType
         get() = DockerHostType.valueOf(options.hostType ?: "IMAGE")
         set(value) {
@@ -192,9 +147,7 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
      * Starts the process.
      *
      * @return the handler for the running process
-     * @throws ExecutionException if the execution failed.
      * @see GeneralCommandLine
-     *
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
@@ -236,7 +189,6 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
     /**
      * Generate the remote Python command.
      *
-     * @param settings: runtime settings
      * @return: Python command string
      */
     private fun python(): Array<String> {
