@@ -42,7 +42,7 @@ class DockerConfigurationFactory(type: RPythonConfigurationType) : Configuration
      * by {@link #getName()} for compatibility but store it directly in the code instead of taking from a message bundle. For new configurations
      * you may use any unique ID; if a new {@link ConfigurationType} has a single {@link ConfigurationFactory}, use {@link SimpleConfigurationType} instead.
      */
-    override fun getId() = "RPythonDockerConfiguration"
+    override fun getId() = "RemotePythonDockerConfiguration"
 
     /**
      * The name of the run configuration variant created by this factory.

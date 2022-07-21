@@ -16,7 +16,7 @@ import software.mdklatt.idea.rpython.run.*
 
 
 /**
- * Unit tests for the DonckerConfigurationFactory class.
+ * Unit tests for the DockerConfigurationFactory class.
  */
 internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
 

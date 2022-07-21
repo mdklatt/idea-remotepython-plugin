@@ -39,7 +39,7 @@ abstract class RemotePythonOptions : RunConfigurationOptions() {
  */
 abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
     project: Project,
-    factory: DockerConfigurationFactory,
+    factory: ConfigurationFactory,
     name: String
 ) :
     RunConfigurationBase<Options>(project, factory, name) {

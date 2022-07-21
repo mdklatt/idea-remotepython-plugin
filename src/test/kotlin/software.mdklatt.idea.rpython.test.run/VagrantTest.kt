@@ -3,17 +3,22 @@
  */
 package software.mdklatt.idea.rpython.test.run
 
-import com.intellij.openapi.util.JDOMExternalizerUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.getOrCreate
 import org.jdom.Element
 import software.mdklatt.idea.rpython.run.*
+
+
+// The IDEA platform tests use JUnit3, so method names are used to determine
+// behavior instead of annotations. Notably, test classes are *not* constructed
+// before each test, so setUp() methods should be used for initialization.
+// Also, test functions must be named `testXXX` or they will not be found
+// during automatic discovery.
 
 
 /**
  * Unit tests for the VagrantConfigurationFactory class.
  */
-class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
+internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
 
     private lateinit var factory: VagrantConfigurationFactory
 
@@ -26,151 +31,109 @@ class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
     }
 
     /**
-     * Test the name property.
+     * Test the testCreateTemplateConfiguration() method.
      */
-    fun testName() {
-        assertEquals("Vagrant Host", factory.name)
+    fun testCreateTemplateConfiguration() {
+        // Just a smoke test to ensure that the expected RunConfiguration type
+        // is returned.
+        factory.createTemplateConfiguration(project).let {
+            assertTrue(it.vagrantExe.isNotBlank())
+        }
     }
-
 }
 
 
 /**
- * Unit tests for the VagrantRunSettings class.
+ * Unit tests for the VagrantRunConfiguration class.
  */
-class VagrantSettingsTest : BasePlatformTestCase() {
+internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
 
-    private lateinit var settings: VagrantSettings
-    private lateinit var element: Element
+    private lateinit var factory: VagrantConfigurationFactory
+    private lateinit var config: VagrantRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        settings = VagrantSettings().apply {
-            targetType = TargetType.MODULE
-            targetName= "pymod"
-            targetParams = "-w INFO"
-            pythonExe = "python3.7"
-            pythonOpts = "one \"two\""
-            remoteWorkDir = "abc/"
-            vagrantExe = "/usr/local/bin/vagrant"
-            vagrantHost = "ubuntu"
-            localWorkDir = "/vagrant"
-        }
-        element = Element("configuration")
+        factory = VagrantConfigurationFactory(RPythonConfigurationType())
+        config = VagrantRunConfiguration(project, factory, "Vagrant Python Test")
     }
 
     /**
      * Test the primary constructor.
      */
     fun testConstructor() {
-        VagrantSettings().apply {
-            assertEquals(TargetType.SCRIPT, targetType)
-            assertEquals("", targetName)
-            assertEquals("", targetParams)
-            assertEquals("python3", pythonExe)
-            assertEquals("", pythonOpts)
-            assertEquals("", remoteWorkDir)
-            assertEquals("vagrant", vagrantExe)
-            assertEquals("", vagrantHost)
-            assertEquals("", localWorkDir)
+        config.let {
+            assertEquals(TargetType.MODULE, it.targetType)
+            assertEquals("", it.targetName)
+            assertEquals("", it.targetParams)
+            assertEquals("python3", it.pythonExe)
+            assertEquals("", it.pythonOpts)
+            assertEquals("", it.localWorkDir)
+            assertEquals("", it.remoteWorkDir)
+            assertEquals("", it.hostName)
+            assertEquals("vagrant", it.vagrantExe)
+            assertEquals("", it.vagrantOpts)
         }
     }
 
     /**
-     * Test round-trip write/read of settings.
+     * Test round-trip write/read of configuration settings.
      */
     fun testPersistence() {
-        settings.save(element)
-        element.getOrCreate(settings.xmlTagName).let {
-            assertTrue(JDOMExternalizerUtil.readField(it, "id", "").isNotEmpty())
+        val element = Element("configuration")
+        config.let {
+            it.targetType = TargetType.SCRIPT
+            it.targetName = "app.py"
+            it.targetParams = "-h"
+            it.pythonExe = "/bin/python"
+            it.pythonOpts = "-v"
+            it.localWorkDir = "./"
+            it.remoteWorkDir = "/tmp"
+            it.hostName = "app"
+            it.vagrantExe = "/bin/vagrant"
+            it.vagrantOpts = "-v"
+            it.writeExternal(element)
         }
-        VagrantSettings().apply {
-            load(element)
-            assertEquals(targetType, settings.targetType)
-            assertEquals(targetName, settings.targetName)
-            assertEquals(targetParams, settings.targetParams)
-            assertEquals(pythonExe, settings.pythonExe)
-            assertEquals(pythonOpts, settings.pythonOpts)
-            assertEquals(remoteWorkDir, settings.remoteWorkDir)
-            assertEquals(vagrantExe, settings.vagrantExe)
-            assertEquals(vagrantHost, settings.vagrantHost)
-            assertEquals(localWorkDir, settings.localWorkDir)
-        }
-    }
-
-    /**
-     * Test the pythonExe property.
-     */
-    fun testPythonExe() {
-        VagrantSettings().apply {
-            pythonExe = ""
-            assertEquals("python3", pythonExe)
-            pythonExe = "abc"
-            assertEquals("abc", pythonExe)
-        }
-    }
-
-    /**
-     * Test the vagrantExe property.
-     */
-    fun testVagrantExe() {
-        VagrantSettings().apply {
-            vagrantExe = ""
-            assertEquals("vagrant", vagrantExe)
-            vagrantExe = "abc"
-            assertEquals("abc", vagrantExe)
+        VagrantRunConfiguration(project, factory, "Persistence Test").let {
+            it.readExternal(element)
+            assertEquals(config.targetType, it.targetType)
+            assertEquals(config.targetName, it.targetName)
+            assertEquals(config.targetParams, it.targetParams)
+            assertEquals(config.pythonExe, it.pythonExe)
+            assertEquals(config.pythonOpts, it.pythonOpts)
+            assertEquals(config.localWorkDir, it.localWorkDir)
+            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.vagrantExe, it.vagrantExe)
+            assertEquals(config.vagrantOpts, it.vagrantOpts)
         }
     }
 }
 
 
 /**
- * Unit tests for the VagrantSettingsEditor class.
+ * Unit tests for the VagrantEditor class.
  */
-internal class VagrantSettingsEditorTest : BasePlatformTestCase() {
+internal class VagrantEditorTest : BasePlatformTestCase() {
 
-    private val factory = VagrantConfigurationFactory(RPythonConfigurationType())
-    private lateinit var config: VagrantRunConfiguration
-    private lateinit var editor: VagrantSettingsEditor
+    private lateinit var editor: VagrantEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        config = factory.createTemplateConfiguration(project)
-        editor = VagrantSettingsEditor(project)
-        val settings = config.settings as VagrantSettings
-        settings.apply {
-            vagrantHost = "vagrant"
-        }
+        editor = VagrantEditor(project)
     }
 
-    /**
-     * Test default editor settings
-     */
-    fun testDefault() {
-        editor.applyTo(config)
-        (config.settings as VagrantSettings).apply {
-            assertEquals("python3", pythonExe)
-            assertEquals("vagrant", vagrantExe)
-        }
-
-    }
+    // TODO: https://github.com/JetBrains/intellij-ui-test-robot
 
     /**
-     * Test round-trip set/get of editor fields.
+     * Test the primary constructor.
      */
-    fun testEditor() {
-        editor.resetFrom(config)
-        config.settings = (config.factory as VagrantConfigurationFactory).createSettings()
-        editor.applyTo(config)
-        (config.settings as VagrantSettings).apply {
-            assertEquals("python3", pythonExe)
-            assertEquals("vagrant", vagrantHost)
-        }
+    fun testConstructor() {
+        // Just a smoke test.
+        assertNotNull(editor.component)
     }
 }
