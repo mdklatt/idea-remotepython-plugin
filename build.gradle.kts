@@ -9,12 +9,12 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
     // Kotlin support
-    kotlin("jvm") version "1.5.10"
+    kotlin("jvm") version "1.7.0"
 
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.0"
+    id("org.jetbrains.intellij") version "1.6.0"
     // gradle-changelog-plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
-    id("org.jetbrains.changelog") version "1.1.2"
+    id("org.jetbrains.changelog") version "1.3.1"
     // detekt linter - read more: https://detekt.github.io/detekt/gradle.html
     // TODO: id("io.gitlab.arturbosch.detekt") version "1.17.1"
     // ktlint linter - read more: https://github.com/JLLeitschuh/ktlint-gradle
@@ -31,8 +31,9 @@ repositories {
 dependencies {
     // TODO: detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
     implementation("org.apache.commons:commons-text:1.8")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.7.0")
-    testImplementation("org.junit.vintage:junit-vintage-engine:5.7.0")
+    testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
+    testImplementation("org.junit.vintage:junit-vintage-engine:5.8.2")
 }
 
 // Configure gradle-intellij-plugin plugin.
@@ -51,8 +52,8 @@ intellij {
 // Configure gradle-changelog-plugin plugin.
 // Read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
-    version = properties("pluginVersion")
-    groups = emptyList()
+    version.set(properties("pluginVersion"))
+    groups.set(emptyList())
 }
 
 // TODO: Enable.
@@ -70,9 +71,14 @@ changelog {
 //}
 
 tasks {
-    // Set the compatibility versions to 1.8
-    withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "1.8"
+    properties("javaVersion").let {
+        withType<KotlinCompile> {
+            kotlinOptions.jvmTarget = it
+        }
+    }
+
+    wrapper {
+        gradleVersion = properties("gradleVersion")
     }
 
     // TODO: Enable.
