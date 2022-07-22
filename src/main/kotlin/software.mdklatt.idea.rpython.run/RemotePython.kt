@@ -5,14 +5,9 @@ package software.mdklatt.idea.rpython.run
 
 import com.intellij.execution.configurations.*
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.fileChooser.FileChooserDescriptor
-import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.ComboBox
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.ui.RawCommandLineEditor
-import javax.swing.JTextField
+import com.intellij.openapi.ui.DialogPanel
 
 
 /**
@@ -155,12 +150,9 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
 /**
  * Base class for run configuration UI
  *
- * @param project: the project in which the run configuration will be used
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : RemotePythonRunConfiguration<Options>> protected constructor(
-    project: Project
-) :
+abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : RemotePythonRunConfiguration<Options>> protected constructor() :
     SettingsEditor<Config>() {
 
     protected companion object {
@@ -168,18 +160,15 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             TargetType.SCRIPT to "Script path:",
             TargetType.MODULE to "Module name:",
         )
-        val fileChooser: FileChooserDescriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
     }
 
-    protected var targetType = ComboBox(targetTypeOptions.values.toTypedArray())
-    protected var targetName = JTextField()
-    protected var targetParams = RawCommandLineEditor()
-    protected var pythonExe = JTextField()
-    protected var pythonOpts = RawCommandLineEditor()
-    protected var remoteWorkDir = JTextField()
-    protected var localWorkDir = TextFieldWithBrowseButton().also {
-        it.addBrowseFolderListener("Local Working Directory", "", project, fileChooser)
-    }
+    protected var targetType = TargetType.MODULE
+    protected var targetName = ""
+    protected var targetParams = ""
+    protected var pythonExe = ""
+    protected var pythonOpts = ""
+    protected var remoteWorkDir = ""
+    protected var localWorkDir = ""
 
     /**
      * Update UI component with options from configuration.
@@ -188,13 +177,13 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      */
     override fun resetEditorFrom(config: Config) {
         config.let {
-            targetType.selectedItem = targetTypeOptions[it.targetType]
-            targetName.text = it.targetName
-            targetParams.text = it.targetParams
-            pythonExe.text = it.pythonExe
-            pythonOpts.text = it.pythonOpts
-            remoteWorkDir.text = it.remoteWorkDir
-            localWorkDir.text = it.localWorkDir
+            targetType = it.targetType
+            targetName = it.targetName
+            targetParams = it.targetParams
+            pythonExe = it.pythonExe
+            pythonOpts = it.pythonOpts
+            remoteWorkDir = it.remoteWorkDir
+            localWorkDir = it.localWorkDir
         }
     }
 
@@ -204,14 +193,15 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      * @param config: run configuration
      */
     override fun applyEditorTo(config: Config) {
+        (this.component as DialogPanel).apply()
         config.let {
-            it.targetName = targetName.text
-            it.targetType = targetTypeOptions.getKey(targetType.selectedItem)
-            it.targetParams = targetParams.text
-            it.pythonExe = pythonExe.text
-            it.pythonOpts = pythonOpts.text
-            it.remoteWorkDir = remoteWorkDir.text
-            it.localWorkDir = localWorkDir.text
+            it.targetType = targetType
+            it.targetName = targetName
+            it.targetParams = targetParams
+            it.pythonExe = pythonExe
+            it.pythonOpts = pythonOpts
+            it.remoteWorkDir = remoteWorkDir
+            it.localWorkDir = localWorkDir
         }
     }
 }

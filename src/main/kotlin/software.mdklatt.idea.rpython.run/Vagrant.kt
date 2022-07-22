@@ -9,12 +9,13 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.panel
+import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
-import javax.swing.JTextField
 
 
 /**
@@ -47,6 +48,11 @@ class VagrantConfigurationFactory(type: RemotePythonConfigurationType) : Configu
      */
     override fun getName() = "Vagrant Machine"
 
+    /**
+     * Return the type of the options storage class.
+     *
+     * @return: options class type
+     */
     override fun getOptionsClass() = VagrantOptions::class.java
 }
 
@@ -87,7 +93,7 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = VagrantEditor(project)
+    override fun getConfigurationEditor() = VagrantEditor()
 
     var hostName: String
         get() = options.hostName ?: ""
@@ -169,17 +175,14 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
 /**
  * UI component for setting run configuration options.
  *
- * @param project: the project in which the run configuration will be used
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class VagrantEditor internal constructor(project: Project) :
-    RemotePythonEditor<VagrantOptions, VagrantRunConfiguration>(project) {
+class VagrantEditor internal constructor() :
+    RemotePythonEditor<VagrantOptions, VagrantRunConfiguration>() {
 
-    private var hostName = JTextField()
-    private var vagrantExe = TextFieldWithBrowseButton().also {
-        it.addBrowseFolderListener("Vagrant Executable", "", project, fileChooser)
-    }
-    private var vagrantOpts = RawCommandLineEditor()
+    private var hostName = ""
+    private var vagrantExe = ""
+    private var vagrantOpts = ""
 
     /**
      * Update UI component with options from configuration.
@@ -189,10 +192,11 @@ class VagrantEditor internal constructor(project: Project) :
     override fun resetEditorFrom(config: VagrantRunConfiguration) {
         super.resetEditorFrom(config)
         config.let {
-            hostName.text = it.hostName
-            vagrantExe.text = it.vagrantExe
-            vagrantOpts.text = it.vagrantOpts
+            hostName = it.hostName
+            vagrantExe = it.vagrantExe
+            vagrantOpts = it.vagrantOpts
         }
+        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -203,9 +207,9 @@ class VagrantEditor internal constructor(project: Project) :
     override fun applyEditorTo(config: VagrantRunConfiguration) {
         super.applyEditorTo(config)
         config.let {
-            it.hostName = hostName.text
-            it.vagrantExe = vagrantExe.text
-            it.vagrantOpts = vagrantOpts.text
+            it.hostName = hostName
+            it.vagrantExe = vagrantExe
+            it.vagrantOpts = vagrantOpts
         }
     }
 
@@ -216,20 +220,44 @@ class VagrantEditor internal constructor(project: Project) :
      */
     override fun createEditor(): JComponent {
         return panel {
-            row() {
-                targetType()
-                targetName()
+            row {
+                comboBox(targetTypeOptions.values).bindItem(
+                    getter = { targetTypeOptions[targetType] },
+                    setter = { targetType = targetTypeOptions.getKey(it) },
+                )
+                textField().bindText(::targetName)
             }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
-            row("Vagrant host:") { hostName() }
-            row("Python interpreter:") { pythonExe() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
-            row("Vagrant executable:") { vagrantExe() }
-            row("Vagrant options:") { vagrantOpts() }
-            row("Local working directory:") { localWorkDir() }
+            row("Parameters:") {
+                expandableTextField().bindText(::targetParams)
+            }
+            group("Remote Environment") {
+                row("Vagrant machine:") {
+                    textField().bindText(::hostName)
+                }
+                row("Python interpreter:") {
+                    textField().bindText(::pythonExe)
+                }
+                row("Python options:") {
+                    textField().bindText(::pythonOpts)
+                }
+                row("Remote working directory:") {
+                    textField().bindText(::remoteWorkDir)
+                }
+            }
+            group("Local Environment") {
+                row("Vagrant executable:") {
+                    textFieldWithBrowseButton("Vagrant Executable").bindText(::vagrantExe)
+                }
+                row("Vagrant options:") {
+                    expandableTextField().bindText(::vagrantOpts)
+                }
+                row("Local working directory") {
+                    textFieldWithBrowseButton(
+                        browseDialogTitle = "Local Working Directory",
+                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                    ).bindText(::localWorkDir)
+                }
+            }
         }
     }
 }

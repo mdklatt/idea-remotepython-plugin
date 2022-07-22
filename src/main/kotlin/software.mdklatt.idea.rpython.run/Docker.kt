@@ -9,13 +9,13 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.ComboBox
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.panel
+import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
-import javax.swing.JTextField
 
 
 /**
@@ -46,8 +46,13 @@ class DockerConfigurationFactory(type: RemotePythonConfigurationType) : Configur
      *
      * @return: name
      */
-    override fun getName() = "Docker Host"
+    override fun getName() = "Docker Container"
 
+    /**
+     * Return the type of the options storage class.
+     *
+     * @return: options class type
+     */
     override fun getOptionsClass() = DockerOptions::class.java
 }
 
@@ -96,7 +101,7 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = DockerEditor(project)
+    override fun getConfigurationEditor() = DockerEditor()
 
     var hostType: DockerHostType
         get() = DockerHostType.valueOf(options.hostType ?: "IMAGE")
@@ -201,11 +206,10 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
 /**
  * UI component for setting run configuration options.
  *
- * @param project: the project in which the run configuration will be used
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class DockerEditor internal constructor(project: Project) :
-    RemotePythonEditor<DockerOptions, DockerRunConfiguration>(project) {
+class DockerEditor internal constructor() :
+    RemotePythonEditor<DockerOptions, DockerRunConfiguration>() {
 
     companion object {
         val hostTypeOptions = mapOf(
@@ -215,16 +219,11 @@ class DockerEditor internal constructor(project: Project) :
         )
     }
 
-    private var hostType = ComboBox(hostTypeOptions.values.toTypedArray())
-    private var hostName = JTextField()
-    private var dockerExe = TextFieldWithBrowseButton().also {
-        it.addBrowseFolderListener("Docker Executable", "", project, fileChooser)
-    }
-    private var dockerCompose = TextFieldWithBrowseButton().also {
-        // TODO: This should only be editable if hostType == SERVICE.
-        it.addBrowseFolderListener("Docker Compose File", "", project, fileChooser)
-    }
-    private var dockerOpts = RawCommandLineEditor()
+    private var hostType = DockerHostType.IMAGE
+    private var hostName = ""
+    private var dockerExe = ""
+    private var dockerCompose = ""
+    private var dockerOpts = ""
 
     /**
      * Update UI component with options from configuration.
@@ -234,12 +233,13 @@ class DockerEditor internal constructor(project: Project) :
     override fun resetEditorFrom(config: DockerRunConfiguration) {
         super.resetEditorFrom(config)
         config.let {
-            hostType.selectedItem = hostTypeOptions[it.hostType]
-            hostName.text = it.hostName
-            dockerExe.text = it.dockerExe
-            dockerCompose.text = it.dockerCompose
-            dockerOpts.text = it.dockerOpts
+            hostType = it.hostType
+            hostName = it.hostName
+            dockerExe = it.dockerExe
+            dockerCompose = it.dockerCompose
+            dockerOpts = it.dockerOpts
         }
+        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -250,11 +250,11 @@ class DockerEditor internal constructor(project: Project) :
     override fun applyEditorTo(config: DockerRunConfiguration) {
         super.applyEditorTo(config)
         config.let {
-            it.hostType = hostTypeOptions.getKey(hostType.selectedItem)
-            it.hostName = hostName.text
-            it.dockerExe = dockerExe.text
-            it.dockerCompose = dockerCompose.text
-            it.dockerOpts = dockerOpts.text
+            it.hostType = hostType
+            it.hostName = hostName
+            it.dockerExe = dockerExe
+            it.dockerCompose = dockerCompose
+            it.dockerOpts = dockerOpts
         }
     }
 
@@ -265,24 +265,51 @@ class DockerEditor internal constructor(project: Project) :
      */
     override fun createEditor(): JComponent {
         return panel {
-            row() {
-                targetType()
-                targetName()
-            }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
             row {
-                hostType()
-                hostName()
+                comboBox(targetTypeOptions.values).bindItem(
+                    { targetTypeOptions[targetType] },
+                    { targetType = targetTypeOptions.getKey(it) },
+                )
+                textField().bindText(::targetName)
             }
-            row("Python interpreter:") { pythonExe() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
-            row("Docker command:") { dockerExe() }
-            row("Docker compose file:") { dockerCompose() }
-            row("Docker options:") { dockerOpts() }
-            row("Local working directory:") { localWorkDir() }
+            row("Parameters:") {
+                expandableTextField().bindText(::targetParams)
+            }
+            group("Remote Environment") {
+                row {
+                    comboBox(hostTypeOptions.values).bindItem(
+                        { hostTypeOptions[hostType] },
+                        { hostType = hostTypeOptions.getKey(it) },
+                    )
+                    textField().bindText(::hostName)
+                }
+                row("Python interpreter:") {
+                    textField().bindText(::pythonExe)
+                }
+                row("Python options:") {
+                    textField().bindText(::pythonOpts)
+                }
+                row("Remote working directory:") {
+                    textField().bindText(::remoteWorkDir)
+                }
+            }
+            group("Local Environment") {
+                row("Docker executable:") {
+                    textFieldWithBrowseButton("Docker Executable").bindText(::dockerExe)
+                }
+                row("Docker compose file:") {
+                    textFieldWithBrowseButton("Docker Compose File").bindText(::dockerCompose)
+                }
+                row("Docker options:") {
+                    expandableTextField().bindText(::dockerOpts)
+                }
+                row("Local working directory") {
+                    textFieldWithBrowseButton(
+                        browseDialogTitle = "Local Working Directory",
+                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                    ).bindText(::localWorkDir)
+                }
+            }
         }
     }
 }

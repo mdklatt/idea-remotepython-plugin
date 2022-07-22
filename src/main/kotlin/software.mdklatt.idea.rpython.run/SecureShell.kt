@@ -9,12 +9,13 @@ import com.intellij.execution.process.KillableColoredProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.ui.RawCommandLineEditor
-import com.intellij.ui.layout.panel
+import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 import javax.swing.JComponent
-import javax.swing.JTextField
 
 
 /**
@@ -47,6 +48,11 @@ class SecureShellConfigurationFactory(type: RemotePythonConfigurationType) : Con
      */
     override fun getName() = "SSH Host"
 
+    /**
+     * Return the type of the options storage class.
+     *
+     * @return: options class type
+     */
     override fun getOptionsClass() = SecureShellOptions::class.java
 }
 
@@ -88,7 +94,7 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = SecureShellEditor(project)
+    override fun getConfigurationEditor() = SecureShellEditor()
 
     var hostName: String
         get() = options.hostName ?: ""
@@ -179,18 +185,15 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
 /**
  * UI component for setting run configuration options.
  *
- * @param project: the project in which the run configuration will be used
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class SecureShellEditor internal constructor(project: Project) :
-    RemotePythonEditor<SecureShellOptions, SecureShellRunConfiguration>(project) {
+class SecureShellEditor internal constructor() :
+    RemotePythonEditor<SecureShellOptions, SecureShellRunConfiguration>() {
 
-    private var hostName = JTextField()
-    private var hostUser = JTextField()
-    private var sshExe = TextFieldWithBrowseButton().also {
-        it.addBrowseFolderListener("SecureShell Executable", "", project, fileChooser)
-    }
-    private var sshOpts = RawCommandLineEditor()
+    private var hostName = ""
+    private var hostUser = ""
+    private var sshExe = ""
+    private var sshOpts = ""
 
     /**
      * Update UI component with options from configuration.
@@ -200,11 +203,12 @@ class SecureShellEditor internal constructor(project: Project) :
     override fun resetEditorFrom(config: SecureShellRunConfiguration) {
         super.resetEditorFrom(config)
         config.let {
-            hostName.text = it.hostName
-            hostUser.text = it.hostUser
-            sshExe.text = it.sshExe
-            sshOpts.text = it.sshOpts
+            hostName = it.hostName
+            hostUser = it.hostUser
+            sshExe = it.sshExe
+            sshOpts = it.sshOpts
         }
+        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -215,10 +219,10 @@ class SecureShellEditor internal constructor(project: Project) :
     override fun applyEditorTo(config: SecureShellRunConfiguration) {
         super.applyEditorTo(config)
         config.let {
-            it.hostName = hostName.text
-            it.hostUser = hostUser.text
-            it.sshExe = sshExe.text
-            it.sshOpts = sshOpts.text
+            it.hostName = hostName
+            it.hostUser = hostUser
+            it.sshExe = sshExe
+            it.sshOpts = sshOpts
         }
     }
 
@@ -229,21 +233,47 @@ class SecureShellEditor internal constructor(project: Project) :
      */
     override fun createEditor(): JComponent {
         return panel {
-            row() {
-                targetType()
-                targetName()
+            row {
+                comboBox(targetTypeOptions.values).bindItem(
+                    { targetTypeOptions[targetType] },
+                    { targetType = targetTypeOptions.getKey(it) },
+                )
+                textField().bindText(::targetName)
             }
-            row("Parameters:") { targetParams() }
-            titledRow("Remote Environment") {}
-            row("Remote host:") { hostName() }
-            row("Remote user:") { hostUser() }
-            row("Python interpreter:") { pythonExe() }
-            row("Python options:") { pythonOpts() }
-            row("Remote working directory:") { remoteWorkDir() }
-            titledRow("Local Environment") {}
-            row("SSH executable:") { sshExe() }
-            row("SSH options:") { sshOpts() }
-            row("Local working directory:") { localWorkDir() }
+            row("Parameters:") {
+                expandableTextField().bindText(::targetParams)
+            }
+            group("Remote Environment") {
+                row("Remote host:") {
+                    textField().bindText(::hostName)
+                }
+                row("Remote user:") {
+                    textField().bindText(::hostUser)
+                }
+                row("Python interpreter:") {
+                    textField().bindText(::pythonExe)
+                }
+                row("Python options:") {
+                    textField().bindText(::pythonOpts)
+                }
+                row("Remote working directory:") {
+                    textField().bindText(::remoteWorkDir)
+                }
+            }
+            group("Local Environment") {
+                row("SSH executable:") {
+                    textFieldWithBrowseButton("SSH Executable").bindText(::sshExe)
+                }
+                row("SSH options:") {
+                    expandableTextField().bindText(::sshOpts)
+                }
+                row("Local working directory") {
+                    textFieldWithBrowseButton(
+                        browseDialogTitle = "Local Working Directory",
+                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                    ).bindText(::localWorkDir)
+                }
+            }
         }
     }
 }

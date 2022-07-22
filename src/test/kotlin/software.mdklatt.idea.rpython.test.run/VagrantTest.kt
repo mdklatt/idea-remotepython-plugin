@@ -125,7 +125,7 @@ internal class VagrantEditorTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        editor = VagrantEditor(project)
+        editor = VagrantEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot

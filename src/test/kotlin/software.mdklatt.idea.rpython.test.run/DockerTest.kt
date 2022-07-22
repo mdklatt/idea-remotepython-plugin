@@ -131,7 +131,7 @@ internal class DockerEditorTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        editor = DockerEditor(project)
+        editor = DockerEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot

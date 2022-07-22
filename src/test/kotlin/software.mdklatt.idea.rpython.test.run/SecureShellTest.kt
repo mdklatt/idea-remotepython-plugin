@@ -128,7 +128,7 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
      */
     override fun setUp() {
         super.setUp()
-        editor = SecureShellEditor(project)
+        editor = SecureShellEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot
