@@ -11,7 +11,6 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
@@ -230,8 +229,7 @@ class DockerEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun resetEditorFrom(config: DockerRunConfiguration) {
-        super.resetEditorFrom(config)
+    override fun updateEditor(config: DockerRunConfiguration) {
         config.let {
             hostType = it.hostType
             hostName = it.hostName
@@ -239,7 +237,6 @@ class DockerEditor internal constructor() :
             dockerCompose = it.dockerCompose
             dockerOpts = it.dockerOpts
         }
-        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -247,8 +244,7 @@ class DockerEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun applyEditorTo(config: DockerRunConfiguration) {
-        super.applyEditorTo(config)
+    override fun updateConfig(config: DockerRunConfiguration) {
         config.let {
             it.hostType = hostType
             it.hostName = hostName

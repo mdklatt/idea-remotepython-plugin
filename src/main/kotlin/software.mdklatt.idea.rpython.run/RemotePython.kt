@@ -175,7 +175,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      *
      * @param config: run configuration
      */
-    override fun resetEditorFrom(config: Config) {
+    final override fun resetEditorFrom(config: Config) {
         config.let {
             targetType = it.targetType
             targetName = it.targetName
@@ -185,6 +185,8 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             remoteWorkDir = it.remoteWorkDir
             localWorkDir = it.localWorkDir
         }
+        updateEditor(config)
+        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -192,7 +194,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      *
      * @param config: run configuration
      */
-    override fun applyEditorTo(config: Config) {
+    final override fun applyEditorTo(config: Config) {
         (this.component as DialogPanel).apply()
         config.let {
             it.targetType = targetType
@@ -203,5 +205,20 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             it.remoteWorkDir = remoteWorkDir
             it.localWorkDir = localWorkDir
         }
+        updateConfig(config)
     }
+
+    /**
+     * Update UI component with options from configuration.
+     *
+     * @param config: run configuration
+     */
+    protected abstract fun updateEditor(config: Config)
+
+    /**
+     * Update configuration with options from UI.
+     *
+     * @param config: run configuration
+     */
+    protected abstract fun updateConfig(config: Config)
 }

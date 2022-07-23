@@ -11,7 +11,6 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
@@ -200,15 +199,13 @@ class SecureShellEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun resetEditorFrom(config: SecureShellRunConfiguration) {
-        super.resetEditorFrom(config)
+    override fun updateEditor(config: SecureShellRunConfiguration) {
         config.let {
             hostName = it.hostName
             hostUser = it.hostUser
             sshExe = it.sshExe
             sshOpts = it.sshOpts
         }
-        (this.component as DialogPanel).reset()
     }
 
     /**
@@ -216,8 +213,7 @@ class SecureShellEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun applyEditorTo(config: SecureShellRunConfiguration) {
-        super.applyEditorTo(config)
+    override fun updateConfig(config: SecureShellRunConfiguration) {
         config.let {
             it.hostName = hostName
             it.hostUser = hostUser
