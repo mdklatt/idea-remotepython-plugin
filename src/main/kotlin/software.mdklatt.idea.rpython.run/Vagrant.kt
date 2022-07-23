@@ -11,10 +11,8 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.panel
-import javax.swing.JComponent
 
 
 /**
@@ -64,6 +62,7 @@ class VagrantOptions : RemotePythonOptions() {
     internal var hostName by string()
     internal var vagrantExe by string()
     internal var vagrantOpts by string()
+    internal var localWorkDir by string()
 }
 
 
@@ -109,6 +108,11 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
         set(value) {
             options.vagrantOpts = value
         }
+    var localWorkDir: String
+        get() = options.localWorkDir ?: ""
+        set(value) {
+            options.localWorkDir = value
+        }
 }
 
 
@@ -153,9 +157,9 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
      */
     private fun python(): String {
         val command = PosixCommandLine().apply {
-            if (config.remoteWorkDir.isNotBlank()) {
+            if (config.pythonWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(config.remoteWorkDir, "&&", config.pythonExe)
+                addParameters(config.pythonWorkDir, "&&", config.pythonExe)
             }
             else {
                 withExePath(config.pythonExe)
@@ -182,78 +186,58 @@ class VagrantEditor internal constructor() :
     private var hostName = ""
     private var vagrantExe = ""
     private var vagrantOpts = ""
+    private var localWorkDir = ""
 
     /**
-     * Update UI component with options from configuration.
+     * Add local executor settings to the UI component.
+     *
+     * @param parent: parent component builder
+     */
+    override fun addExecutorFields(parent: Panel) {
+        parent.run {
+            row("Vagrant machine:") {
+                textField().bindText(::hostName)
+            }
+            row("Vagrant executable:") {
+                textFieldWithBrowseButton("Vagrant Executable").bindText(::vagrantExe)
+            }
+            row("Vagrant options:") {
+                expandableTextField().bindText(::vagrantOpts)
+            }
+            row("Working directory") {
+                textFieldWithBrowseButton(
+                    browseDialogTitle = "Working Directory",
+                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                ).bindText(::localWorkDir)
+            }
+        }
+    }
+
+    /**
+     * Reset UI with local executor options from configuration.
      *
      * @param config: run configuration
      */
-    override fun updateEditor(config: VagrantRunConfiguration) {
+    override fun resetExecutorOptions(config: VagrantRunConfiguration) {
         config.let {
             hostName = it.hostName
             vagrantExe = it.vagrantExe
             vagrantOpts = it.vagrantOpts
+            localWorkDir = it.localWorkDir
         }
     }
 
     /**
-     * Update configuration with options from UI.
+     * Apply UI local executor options to configuration.
      *
      * @param config: run configuration
      */
-    override fun updateConfig(config: VagrantRunConfiguration) {
+    override fun applyExecutorOptions(config: VagrantRunConfiguration) {
         config.let {
             it.hostName = hostName
             it.vagrantExe = vagrantExe
             it.vagrantOpts = vagrantOpts
-        }
-    }
-
-    /**
-     * Create the UI component.
-     *
-     * @return Swing component
-     */
-    override fun createEditor(): JComponent {
-        return panel {
-            row {
-                comboBox(targetTypeOptions.values).bindItem(
-                    getter = { targetTypeOptions[targetType] },
-                    setter = { targetType = targetTypeOptions.getKey(it) },
-                )
-                textField().bindText(::targetName)
-            }
-            row("Parameters:") {
-                expandableTextField().bindText(::targetParams)
-            }
-            group("Remote Environment") {
-                row("Vagrant machine:") {
-                    textField().bindText(::hostName)
-                }
-                row("Python interpreter:") {
-                    textField().bindText(::pythonExe)
-                }
-                row("Python options:") {
-                    textField().bindText(::pythonOpts)
-                }
-                row("Remote working directory:") {
-                    textField().bindText(::remoteWorkDir)
-                }
-            }
-            group("Local Environment") {
-                row("Vagrant executable:") {
-                    textFieldWithBrowseButton("Vagrant Executable").bindText(::vagrantExe)
-                }
-                row("Vagrant options:") {
-                    expandableTextField().bindText(::vagrantOpts)
-                }
-                row("Local working directory") {
-                    textFieldWithBrowseButton(
-                        browseDialogTitle = "Local Working Directory",
-                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
-                    ).bindText(::localWorkDir)
-                }
-            }
+            it.localWorkDir = localWorkDir
         }
     }
 }

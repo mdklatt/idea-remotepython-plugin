@@ -11,10 +11,8 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.panel
-import javax.swing.JComponent
 
 
 /**
@@ -65,6 +63,7 @@ class SecureShellOptions : RemotePythonOptions() {
     internal var hostUser by string()
     internal var sshExe by string()
     internal var sshOpts by string()
+    internal var localWorkDir by string()
 }
 
 
@@ -115,6 +114,11 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
         set(value) {
             options.sshOpts = value
         }
+    var localWorkDir: String
+        get() = options.localWorkDir ?: ""
+        set(value) {
+            options.localWorkDir = value
+        }
 }
 
 
@@ -163,9 +167,9 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
     private fun python(): String {
         // TODO: Identical to VagrantState.
         val command = PosixCommandLine().apply {
-            if (config.remoteWorkDir.isNotBlank()) {
+            if (config.pythonWorkDir.isNotBlank()) {
                 withExePath("cd")
-                addParameters(config.remoteWorkDir, "&&", config.pythonExe)
+                addParameters(config.pythonWorkDir, "&&", config.pythonExe)
             }
             else {
                 withExePath(config.pythonExe)
@@ -193,83 +197,59 @@ class SecureShellEditor internal constructor() :
     private var hostUser = ""
     private var sshExe = ""
     private var sshOpts = ""
+    private var localWorkDir = ""
 
     /**
-     * Update UI component with options from configuration.
+     * Add local executor settings to the UI component.
+     *
+     * @param parent: parent component builder
+     */
+    override fun addExecutorFields(parent: Panel) {
+        parent.run {
+            row("SSH executable:") {
+                textFieldWithBrowseButton("SSH Executable").bindText(::sshExe)
+            }
+            row("SSH options:") {
+                expandableTextField().bindText(::sshOpts)
+            }
+            row("Local working directory") {
+                // TODO: Is this necessary for SSH?
+                textFieldWithBrowseButton(
+                    browseDialogTitle = "Local Working Directory",
+                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                ).bindText(::localWorkDir)
+            }
+
+        }
+    }
+
+    /**
+     * Reset UI with local executor options from configuration.
      *
      * @param config: run configuration
      */
-    override fun updateEditor(config: SecureShellRunConfiguration) {
+    override fun resetExecutorOptions(config: SecureShellRunConfiguration) {
         config.let {
             hostName = it.hostName
             hostUser = it.hostUser
             sshExe = it.sshExe
             sshOpts = it.sshOpts
+            localWorkDir = it.localWorkDir
         }
     }
 
     /**
-     * Update configuration with options from UI.
+     * Apply UI local executor options to configuration.
      *
      * @param config: run configuration
      */
-    override fun updateConfig(config: SecureShellRunConfiguration) {
+    override fun applyExecutorOptions(config: SecureShellRunConfiguration) {
         config.let {
             it.hostName = hostName
             it.hostUser = hostUser
             it.sshExe = sshExe
             it.sshOpts = sshOpts
-        }
-    }
-
-    /**
-     * Create the UI component.
-     *
-     * @return Swing component
-     */
-    override fun createEditor(): JComponent {
-        return panel {
-            row {
-                comboBox(targetTypeOptions.values).bindItem(
-                    { targetTypeOptions[targetType] },
-                    { targetType = targetTypeOptions.getKey(it) },
-                )
-                textField().bindText(::targetName)
-            }
-            row("Parameters:") {
-                expandableTextField().bindText(::targetParams)
-            }
-            group("Remote Environment") {
-                row("Remote host:") {
-                    textField().bindText(::hostName)
-                }
-                row("Remote user:") {
-                    textField().bindText(::hostUser)
-                }
-                row("Python interpreter:") {
-                    textField().bindText(::pythonExe)
-                }
-                row("Python options:") {
-                    textField().bindText(::pythonOpts)
-                }
-                row("Remote working directory:") {
-                    textField().bindText(::remoteWorkDir)
-                }
-            }
-            group("Local Environment") {
-                row("SSH executable:") {
-                    textFieldWithBrowseButton("SSH Executable").bindText(::sshExe)
-                }
-                row("SSH options:") {
-                    expandableTextField().bindText(::sshOpts)
-                }
-                row("Local working directory") {
-                    textFieldWithBrowseButton(
-                        browseDialogTitle = "Local Working Directory",
-                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
-                    ).bindText(::localWorkDir)
-                }
-            }
+            it.localWorkDir = localWorkDir
         }
     }
 }

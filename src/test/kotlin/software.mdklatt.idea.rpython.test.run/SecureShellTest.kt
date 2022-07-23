@@ -71,7 +71,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("python3", it.pythonExe)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
-            assertEquals("", it.remoteWorkDir)
+            assertEquals("", it.pythonWorkDir)
             assertEquals("", it.hostName)
             assertEquals("", it.hostUser)
             assertEquals("ssh", it.sshExe)
@@ -91,7 +91,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
-            it.remoteWorkDir = "/tmp"
+            it.pythonWorkDir = "/tmp"
             it.hostName = "app"
             it.hostUser = "dave"
             it.sshExe = "/bin/ssh"
@@ -106,7 +106,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonExe, it.pythonExe)
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
-            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.pythonWorkDir, it.pythonWorkDir)
             assertEquals(config.hostName, it.hostName)
             assertEquals(config.hostUser, it.hostUser)
             assertEquals(config.sshExe, it.sshExe)

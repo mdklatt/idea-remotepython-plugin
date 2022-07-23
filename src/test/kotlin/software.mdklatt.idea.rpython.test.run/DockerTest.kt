@@ -71,7 +71,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("python3", it.pythonExe)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
-            assertEquals("", it.remoteWorkDir)
+            assertEquals("", it.pythonWorkDir)
             assertEquals(DockerHostType.IMAGE, it.hostType)
             assertEquals("", it.hostName)
             assertEquals("docker", it.dockerExe)
@@ -92,7 +92,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
-            it.remoteWorkDir = "/tmp"
+            it.pythonWorkDir = "/opt/app"
             it.hostType = DockerHostType.SERVICE
             it.hostName = "app"
             it.dockerExe = "/bin/docker"
@@ -108,7 +108,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonExe, it.pythonExe)
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
-            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.pythonWorkDir, it.pythonWorkDir)
             assertEquals(config.hostType, it.hostType)
             assertEquals(config.hostName, it.hostName)
             assertEquals(config.dockerExe, it.dockerExe)

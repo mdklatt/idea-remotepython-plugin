@@ -71,7 +71,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("python3", it.pythonExe)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
-            assertEquals("", it.remoteWorkDir)
+            assertEquals("", it.pythonWorkDir)
             assertEquals("", it.hostName)
             assertEquals("vagrant", it.vagrantExe)
             assertEquals("", it.vagrantOpts)
@@ -90,7 +90,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
-            it.remoteWorkDir = "/tmp"
+            it.pythonWorkDir = "/tmp"
             it.hostName = "app"
             it.vagrantExe = "/bin/vagrant"
             it.vagrantOpts = "-v"
@@ -104,7 +104,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonExe, it.pythonExe)
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
-            assertEquals(config.remoteWorkDir, it.remoteWorkDir)
+            assertEquals(config.pythonWorkDir, it.pythonWorkDir)
             assertEquals(config.hostName, it.hostName)
             assertEquals(config.vagrantExe, it.vagrantExe)
             assertEquals(config.vagrantOpts, it.vagrantOpts)

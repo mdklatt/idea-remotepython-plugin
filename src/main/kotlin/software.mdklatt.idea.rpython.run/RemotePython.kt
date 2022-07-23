@@ -8,6 +8,10 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
+import com.intellij.ui.dsl.builder.Panel
+import com.intellij.ui.dsl.builder.bindItem
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 
 
 /**
@@ -80,8 +84,7 @@ abstract class RemotePythonOptions : RunConfigurationOptions() {
     internal var targetParams by string()
     internal var pythonExe by string()
     internal var pythonOpts by string()
-    internal var remoteWorkDir by string()
-    internal var localWorkDir by string()
+    internal var pythonWorkDir by string()
 }
 
 
@@ -134,15 +137,10 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         set(value) {
             options.pythonOpts = value
         }
-    var remoteWorkDir: String
-        get() = options.remoteWorkDir ?: ""
+    var pythonWorkDir: String
+        get() = options.pythonWorkDir ?: ""
         set(value) {
-            options.remoteWorkDir = value
-        }
-    var localWorkDir: String
-        get() = options.localWorkDir ?: ""
-        set(value) {
-            options.localWorkDir = value
+            options.pythonWorkDir = value
         }
 }
 
@@ -155,20 +153,72 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
 abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : RemotePythonRunConfiguration<Options>> protected constructor() :
     SettingsEditor<Config>() {
 
-    protected companion object {
+    private companion object {
         val targetTypeOptions = mapOf(
             TargetType.SCRIPT to "Script path:",
             TargetType.MODULE to "Module name:",
         )
     }
 
-    protected var targetType = TargetType.MODULE
-    protected var targetName = ""
-    protected var targetParams = ""
-    protected var pythonExe = ""
-    protected var pythonOpts = ""
-    protected var remoteWorkDir = ""
-    protected var localWorkDir = ""
+    private var targetType = TargetType.MODULE
+    private var targetName = ""
+    private var targetParams = ""
+    private var pythonExe = ""
+    private var pythonOpts = ""
+    private var pythonWorkDir = ""
+
+    /**
+     * Create the UI component.
+     *
+     * @return Swing component
+     */
+    final override fun createEditor(): DialogPanel {
+        return panel {
+            group("Remote Python") {
+                addPythonFields(this)
+            }
+            group("Local Execution") {
+                addExecutorFields(this)
+            }
+        }
+    }
+
+    /**
+     * Add Python settings to the UI component.
+     *
+     * @param parent: parent component builder
+     */
+    private fun addPythonFields(parent: Panel) {
+        parent.let {
+            it.row {
+                comboBox(targetTypeOptions.values).bindItem(
+                    getter = { targetTypeOptions[targetType] },
+                    setter = { targetType = targetTypeOptions.getKey(it) },
+                )
+                textField().bindText(::targetName)
+            }
+            it.row("Parameters:") {
+                expandableTextField().bindText(::targetParams)
+            }
+            it.row("Python interpreter:") {
+                textField().bindText(::pythonExe)
+            }
+            it.row("Python options:") {
+                textField().bindText(::pythonOpts)
+            }
+            it.row("Working directory:") {
+                textField().bindText(::pythonWorkDir)
+            }
+        }
+    }
+
+    /**
+     * Add local executor settings to the UI component.
+     *
+     * @param parent: parent component builder
+     */
+    protected abstract fun addExecutorFields(parent: Panel)
+
 
     /**
      * Update UI component with options from configuration.
@@ -176,18 +226,34 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      * @param config: run configuration
      */
     final override fun resetEditorFrom(config: Config) {
+        // Update bound properties from config value then reset UI.
+        resetPythonOptions(config)
+        resetExecutorOptions(config)
+        (this.component as DialogPanel).reset()
+    }
+
+    /**
+     * Reset UI component with remote Python options from configuration.
+     *
+     * @param config: run configuration
+     */
+    private fun resetPythonOptions(config: Config) {
         config.let {
             targetType = it.targetType
             targetName = it.targetName
             targetParams = it.targetParams
             pythonExe = it.pythonExe
             pythonOpts = it.pythonOpts
-            remoteWorkDir = it.remoteWorkDir
-            localWorkDir = it.localWorkDir
+            pythonWorkDir = it.pythonWorkDir
         }
-        updateEditor(config)
-        (this.component as DialogPanel).reset()
     }
+
+    /**
+     * Reset UI with local executor options from configuration.
+     *
+     * @param config: run configuration
+     */
+    protected abstract fun resetExecutorOptions(config: Config)
 
     /**
      * Update configuration with options from UI.
@@ -195,30 +261,32 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      * @param config: run configuration
      */
     final override fun applyEditorTo(config: Config) {
+        // Apply UI to bound properties then update config values.
         (this.component as DialogPanel).apply()
+        applyPythonOptions(config)
+        applyExecutorOptions(config)
+    }
+
+    /**
+     * Apply UI local executor options to configuration.
+     *
+     * @param config: run configuration
+     */
+    private fun applyPythonOptions(config: Config) {
         config.let {
             it.targetType = targetType
             it.targetName = targetName
             it.targetParams = targetParams
             it.pythonExe = pythonExe
             it.pythonOpts = pythonOpts
-            it.remoteWorkDir = remoteWorkDir
-            it.localWorkDir = localWorkDir
+            it.pythonWorkDir = pythonWorkDir
         }
-        updateConfig(config)
     }
 
     /**
-     * Update UI component with options from configuration.
+     * Apply UI local executor options to configuration.
      *
      * @param config: run configuration
      */
-    protected abstract fun updateEditor(config: Config)
-
-    /**
-     * Update configuration with options from UI.
-     *
-     * @param config: run configuration
-     */
-    protected abstract fun updateConfig(config: Config)
+    protected abstract fun applyExecutorOptions(config: Config)
 }

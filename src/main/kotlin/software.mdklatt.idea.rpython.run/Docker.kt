@@ -11,10 +11,9 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
+import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
-import com.intellij.ui.dsl.builder.panel
-import javax.swing.JComponent
 
 
 /**
@@ -72,6 +71,7 @@ class DockerOptions : RemotePythonOptions() {
     internal var dockerExe by string()
     internal var dockerCompose by string()
     internal var dockerOpts by string()
+    internal var localWorkDir by string()
 }
 
 
@@ -127,6 +127,11 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
         set(value) {
             options.dockerCompose = value
         }
+    var localWorkDir: String
+        get() = options.localWorkDir ?: ""
+        set(value) {
+            options.localWorkDir = value
+        }
 }
 
 
@@ -149,7 +154,7 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
      */
     override fun startProcess(): ProcessHandler {
         val runOptions = mapOf(
-            "workdir" to config.remoteWorkDir.ifBlank { null },  // null to omit
+            "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
             "rm" to true,
             "entrypoint" to ""
         )
@@ -210,7 +215,7 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
 class DockerEditor internal constructor() :
     RemotePythonEditor<DockerOptions, DockerRunConfiguration>() {
 
-    companion object {
+    private companion object {
         val hostTypeOptions = mapOf(
             DockerHostType.CONTAINER to "Container name:",
             DockerHostType.IMAGE to "Image label:",
@@ -223,88 +228,68 @@ class DockerEditor internal constructor() :
     private var dockerExe = ""
     private var dockerCompose = ""
     private var dockerOpts = ""
+    private var localWorkDir = ""
 
     /**
-     * Update UI component with options from configuration.
+     * Reset UI component with local executor options from configuration.
      *
      * @param config: run configuration
      */
-    override fun updateEditor(config: DockerRunConfiguration) {
+    override fun resetExecutorOptions(config: DockerRunConfiguration) {
         config.let {
             hostType = it.hostType
             hostName = it.hostName
             dockerExe = it.dockerExe
             dockerCompose = it.dockerCompose
             dockerOpts = it.dockerOpts
+            localWorkDir = it.localWorkDir
         }
     }
 
     /**
-     * Update configuration with options from UI.
+     * Apply UI local executor options to configuration.
      *
      * @param config: run configuration
      */
-    override fun updateConfig(config: DockerRunConfiguration) {
+    override fun applyExecutorOptions(config: DockerRunConfiguration) {
         config.let {
             it.hostType = hostType
             it.hostName = hostName
             it.dockerExe = dockerExe
             it.dockerCompose = dockerCompose
             it.dockerOpts = dockerOpts
+            it.localWorkDir = localWorkDir
         }
     }
 
     /**
-     * Create the UI component.
+     * Add local executor settings to the UI component.
      *
-     * @return Swing component
+     * @param parent: parent component builder
      */
-    override fun createEditor(): JComponent {
-        return panel {
+    override fun addExecutorFields(parent: Panel) {
+        parent.run {
             row {
-                comboBox(targetTypeOptions.values).bindItem(
-                    { targetTypeOptions[targetType] },
-                    { targetType = targetTypeOptions.getKey(it) },
+                comboBox(hostTypeOptions.values).bindItem(
+                    { hostTypeOptions[hostType] },
+                    { hostType = hostTypeOptions.getKey(it) },
                 )
-                textField().bindText(::targetName)
+                textField().bindText(::hostName)
             }
-            row("Parameters:") {
-                expandableTextField().bindText(::targetParams)
+            row("Docker executable:") {
+                textFieldWithBrowseButton("Docker Executable").bindText(::dockerExe)
             }
-            group("Remote Environment") {
-                row {
-                    comboBox(hostTypeOptions.values).bindItem(
-                        { hostTypeOptions[hostType] },
-                        { hostType = hostTypeOptions.getKey(it) },
-                    )
-                    textField().bindText(::hostName)
-                }
-                row("Python interpreter:") {
-                    textField().bindText(::pythonExe)
-                }
-                row("Python options:") {
-                    textField().bindText(::pythonOpts)
-                }
-                row("Remote working directory:") {
-                    textField().bindText(::remoteWorkDir)
-                }
+            row("Docker compose file:") {
+                textFieldWithBrowseButton("Docker Compose File").bindText(::dockerCompose)
             }
-            group("Local Environment") {
-                row("Docker executable:") {
-                    textFieldWithBrowseButton("Docker Executable").bindText(::dockerExe)
-                }
-                row("Docker compose file:") {
-                    textFieldWithBrowseButton("Docker Compose File").bindText(::dockerCompose)
-                }
-                row("Docker options:") {
-                    expandableTextField().bindText(::dockerOpts)
-                }
-                row("Local working directory") {
-                    textFieldWithBrowseButton(
-                        browseDialogTitle = "Local Working Directory",
-                        fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
-                    ).bindText(::localWorkDir)
-                }
+            row("Docker options:") {
+                expandableTextField().bindText(::dockerOpts)
+            }
+            row("Local working directory") {
+                textFieldWithBrowseButton(
+                    browseDialogTitle = "Local Working Directory",
+                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                ).bindText(::localWorkDir)
             }
         }
     }
