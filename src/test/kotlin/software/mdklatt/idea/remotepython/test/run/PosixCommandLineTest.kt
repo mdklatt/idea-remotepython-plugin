@@ -1,5 +1,6 @@
 package software.mdklatt.idea.remotepython.test.run
 
+import kotlin.io.path.createTempFile
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import software.mdklatt.idea.remotepython.run.PosixCommandLine
@@ -111,7 +112,7 @@ internal class PosixCommandLineTest {
     @Test
     fun testWithInputFile() {
         val command = PosixCommandLine("cat")
-        createTempFile().let {
+        createTempFile().toFile().let {
             it.deleteOnExit()
             it.writeText("TEST")
             command.withInput(it)
