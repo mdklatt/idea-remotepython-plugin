@@ -1,11 +1,11 @@
 /**
  * Unit tests for the Docker module.
  */
-package software.mdklatt.idea.rpython.test.run
+package software.mdklatt.idea.remotepython.test.run
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
-import software.mdklatt.idea.rpython.run.*
+import software.mdklatt.idea.remotepython.run.*
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine

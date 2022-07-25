@@ -1,4 +1,4 @@
-package software.mdklatt.idea.rpython.run
+package software.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.util.execution.ParametersListUtil

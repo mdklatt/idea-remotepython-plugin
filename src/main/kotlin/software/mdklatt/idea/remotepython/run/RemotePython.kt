@@ -1,7 +1,7 @@
 /**
  * IDEA run configurations for Remote Python execution.
  */
-package software.mdklatt.idea.rpython.run
+package software.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.configurations.*
 import com.intellij.icons.AllIcons
@@ -113,7 +113,7 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
     // TODO: Why can't options.<property> be used as a delegate?
 
     var targetType: TargetType
-        get() = software.mdklatt.idea.rpython.run.TargetType.valueOf(options.targetType ?: "MODULE")
+        get() = TargetType.valueOf(options.targetType ?: "MODULE")
         set(value) {
             options.targetType = value.name
         }

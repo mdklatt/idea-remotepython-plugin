@@ -1,7 +1,7 @@
 /**
  * Extensions for the Map class.
  */
-package software.mdklatt.idea.rpython.run
+package software.mdklatt.idea.remotepython.run
 
 
 /**

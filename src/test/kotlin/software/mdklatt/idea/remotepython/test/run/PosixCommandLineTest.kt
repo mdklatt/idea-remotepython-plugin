@@ -1,8 +1,8 @@
-package software.mdklatt.idea.rpython.test.run
+package software.mdklatt.idea.remotepython.test.run
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.rpython.run.PosixCommandLine
+import software.mdklatt.idea.remotepython.run.PosixCommandLine
 import kotlin.test.assertNotNull
 
 

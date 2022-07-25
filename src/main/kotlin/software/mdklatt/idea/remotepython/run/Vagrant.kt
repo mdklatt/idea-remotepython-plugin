@@ -1,7 +1,7 @@
 /**
  * Run Python on a Vagrant machine.
  */
-package software.mdklatt.idea.rpython.run
+package software.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*

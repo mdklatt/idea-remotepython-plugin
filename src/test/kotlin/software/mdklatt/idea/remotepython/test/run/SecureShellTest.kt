@@ -1,11 +1,11 @@
 /**
- * Unit tests for the Vagrant module.
+ * Unit tests for the SecureShell module.
  */
-package software.mdklatt.idea.rpython.test.run
+package software.mdklatt.idea.remotepython.test.run
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
-import software.mdklatt.idea.rpython.run.*
+import software.mdklatt.idea.remotepython.run.*
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -16,18 +16,18 @@ import software.mdklatt.idea.rpython.run.*
 
 
 /**
- * Unit tests for the VagrantConfigurationFactory class.
+ * Unit tests for the SecureShellConfigurationFactory class.
  */
-internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
+internal class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
 
-    private lateinit var factory: VagrantConfigurationFactory
+    private lateinit var factory: SecureShellConfigurationFactory
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -37,27 +37,27 @@ internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
         // Just a smoke test to ensure that the expected RunConfiguration type
         // is returned.
         factory.createTemplateConfiguration(project).let {
-            assertTrue(it.vagrantExe.isNotBlank())
+            assertTrue(it.sshExe.isNotBlank())
         }
     }
 }
 
 
 /**
- * Unit tests for the VagrantRunConfiguration class.
+ * Unit tests for the SecureShellRunConfiguration class.
  */
-internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
+internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
 
-    private lateinit var factory: VagrantConfigurationFactory
-    private lateinit var config: VagrantRunConfiguration
+    private lateinit var factory: SecureShellConfigurationFactory
+    private lateinit var config: SecureShellRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
-        config = VagrantRunConfiguration(project, factory, "Vagrant Python Test")
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
+        config = SecureShellRunConfiguration(project, factory, "SecureShell Python Test")
     }
 
     /**
@@ -73,8 +73,9 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.localWorkDir)
             assertEquals("", it.pythonWorkDir)
             assertEquals("", it.hostName)
-            assertEquals("vagrant", it.vagrantExe)
-            assertEquals("", it.vagrantOpts)
+            assertEquals("", it.hostUser)
+            assertEquals("ssh", it.sshExe)
+            assertEquals("", it.sshOpts)
         }
     }
 
@@ -92,11 +93,12 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             it.localWorkDir = "./"
             it.pythonWorkDir = "/tmp"
             it.hostName = "app"
-            it.vagrantExe = "/bin/vagrant"
-            it.vagrantOpts = "-v"
+            it.hostUser = "dave"
+            it.sshExe = "/bin/ssh"
+            it.sshOpts = "-v"
             it.writeExternal(element)
         }
-        VagrantRunConfiguration(project, factory, "Persistence Test").let {
+        SecureShellRunConfiguration(project, factory, "Persistence Test").let {
             it.readExternal(element)
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
@@ -106,26 +108,27 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.localWorkDir, it.localWorkDir)
             assertEquals(config.pythonWorkDir, it.pythonWorkDir)
             assertEquals(config.hostName, it.hostName)
-            assertEquals(config.vagrantExe, it.vagrantExe)
-            assertEquals(config.vagrantOpts, it.vagrantOpts)
+            assertEquals(config.hostUser, it.hostUser)
+            assertEquals(config.sshExe, it.sshExe)
+            assertEquals(config.sshOpts, it.sshOpts)
         }
     }
 }
 
 
 /**
- * Unit tests for the VagrantEditor class.
+ * Unit tests for the SecureShellEditor class.
  */
-internal class VagrantEditorTest : BasePlatformTestCase() {
+internal class SecureShellEditorTest : BasePlatformTestCase() {
 
-    private lateinit var editor: VagrantEditor
+    private lateinit var editor: SecureShellEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        editor = VagrantEditor()
+        editor = SecureShellEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot
