@@ -1,6 +1,7 @@
 // Adapted from <https://github.com/JetBrains/intellij-platform-plugin-template>.
 
 // TODO: import io.gitlab.arturbosch.detekt.Detekt
+import org.jetbrains.changelog.date
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -52,8 +53,12 @@ intellij {
 // Configure gradle-changelog-plugin plugin.
 // Read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
-    version.set(properties("pluginVersion"))
-    groups.set(emptyList())
+    path.set("${project.projectDir}/CHANGELOG.md")
+    header.set(provider { "[${version}] - ${date()}" })
+    itemPrefix.set("-")
+    keepUnreleasedSection.set(true)
+    unreleasedTerm.set("[Unreleased]")
+    groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
 }
 
 // TODO: Enable.
@@ -105,7 +110,7 @@ tasks {
         )
 
         // Get the latest available change notes from the changelog file
-        changeNotes.set(provider {changelog.getLatest().toHTML()})
+        changeNotes.set(provider {changelog.getUnreleased().toHTML()})
     }
 
     runPluginVerifier {
