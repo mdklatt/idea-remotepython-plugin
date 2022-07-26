@@ -11,16 +11,13 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out project
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3
         with:
           java-version: 11
-      - name: Cache Gradle packages
-        uses: actions/cache@v1
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle
+          distribution: zulu  # https://www.azul.com/downloads/?package=jdk
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v2
       - name: Build project
-        run: chmod +x gradlew && ./gradlew build && ./gradlew runPluginVerifier
+        run:  ./gradlew build && ./gradlew runPluginVerifier
