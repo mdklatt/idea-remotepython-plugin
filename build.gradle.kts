@@ -1,58 +1,43 @@
 // Adapted from <https://github.com/JetBrains/intellij-platform-plugin-template>.
 
-// TODO: import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.changelog.date
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 fun properties(key: String) = project.findProperty(key).toString()
 
+version = properties("pluginVersion")
+
 
 plugins {
-    // Kotlin support
     kotlin("jvm") version "1.7.0"
-
-    // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
     id("org.jetbrains.intellij") version "1.6.0"
-    // gradle-changelog-plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
     id("org.jetbrains.changelog") version "1.3.1"
-    // detekt linter - read more: https://detekt.github.io/detekt/gradle.html
-    // TODO: id("io.gitlab.arturbosch.detekt") version "1.17.1"
-    // ktlint linter - read more: https://github.com/JLLeitschuh/ktlint-gradle
-    // TODO: id("org.jlleitschuh.gradle.ktlint") version "10.0.0"
 }
-
-group = properties("pluginGroup")
-version = properties("pluginVersion")
 
 // Configure project's dependencies
 repositories {
     mavenCentral()
 }
 dependencies {
-    // TODO: detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
     implementation("org.apache.commons:commons-text:1.8")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
     testImplementation("org.junit.vintage:junit-vintage-engine:5.8.2")
 }
 
-// Configure gradle-intellij-plugin plugin.
-// Read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-    pluginName.set(properties("pluginName"))
+    // <https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html>
+    pluginName.set(properties("pluginZipName"))
     version.set(properties("platformVersion"))
     type.set(properties("platformType"))
     downloadSources.set(properties("platformDownloadSources").toBoolean())
     updateSinceUntilBuild.set(true)
-
-    // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
     plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
 }
 
-// Configure gradle-changelog-plugin plugin.
-// Read more: https://github.com/JetBrains/gradle-changelog-plugin
 changelog {
+    // <https://github.com/JetBrains/gradle-changelog-plugin>
     path.set("${project.projectDir}/CHANGELOG.md")
     header.set(provider { "[${version}] - ${date()}" })
     itemPrefix.set("-")
@@ -60,20 +45,6 @@ changelog {
     unreleasedTerm.set("[Unreleased]")
     groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
 }
-
-// TODO: Enable.
-// Configure detekt plugin.
-// Read more: https://detekt.github.io/detekt/kotlindsl.html
-// detekt {
-//     config = files("./detekt-config.yml")
-//     buildUponDefaultConfig = true
-//
-//     reports {
-//         html.enabled = false
-//         xml.enabled = false
-//         txt.enabled = false
-//     }
-//}
 
 tasks {
     properties("javaVersion").let {
@@ -85,11 +56,6 @@ tasks {
     wrapper {
         gradleVersion = properties("gradleVersion")
     }
-
-    // TODO: Enable.
-    // withType<Detekt> {
-    //     jvmTarget = "1.8"
-    // }
 
     patchPluginXml {
         version.set(properties("pluginVersion"))

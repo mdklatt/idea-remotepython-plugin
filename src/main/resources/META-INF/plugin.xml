@@ -6,7 +6,7 @@
   <!-- The <version>, <description>, <idea-version>, and <changes-notes>
        elements are inserted on build by the Gradle build script. -->
 
-  <!-- Please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+  <!-- See https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
        on how to target different products -->
   <depends>com.intellij.modules.platform</depends>
 
