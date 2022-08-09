@@ -39,9 +39,8 @@ intellij {
 changelog {
     // <https://github.com/JetBrains/gradle-changelog-plugin>
     path.set("${project.projectDir}/CHANGELOG.md")
-    header.set(provider { "[${version}] - ${date()}" })
+    header.set(provider { "[${version.get()}] - ${date()}" })
     itemPrefix.set("-")
-    keepUnreleasedSection.set(true)
     unreleasedTerm.set("[Unreleased]")
     groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
 }
@@ -58,7 +57,6 @@ tasks {
     }
 
     patchPluginXml {
-        version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set(properties("pluginUntilBuild"))
 
@@ -76,7 +74,8 @@ tasks {
         )
 
         // Get the latest available change notes from the changelog file
-        changeNotes.set(provider {changelog.getUnreleased().toHTML()})
+        changeNotes.set(changelog.getLatest().toHTML())
+
     }
 
     runPluginVerifier {
