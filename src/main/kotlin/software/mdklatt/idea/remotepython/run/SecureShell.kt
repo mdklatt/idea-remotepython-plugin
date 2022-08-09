@@ -178,7 +178,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
                 addParameter("-m")
             }
             addParameter(config.targetName)
-            addParameters(PosixCommandLine.split(config.targetParams))
+            addParameters(PosixCommandLine.split(config.targetArgs))
         }
         return command.commandLineString
     }

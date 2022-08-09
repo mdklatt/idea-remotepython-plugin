@@ -81,7 +81,7 @@ enum class TargetType { MODULE, SCRIPT }  // TODO: internal
 abstract class RemotePythonOptions : RunConfigurationOptions() {
     internal var targetType by string()
     internal var targetName by string()
-    internal var targetParams by string()
+    internal var targetArgs by string()
     internal var pythonExe by string()
     internal var pythonOpts by string()
     internal var pythonWorkDir by string()
@@ -122,10 +122,10 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         set(value) {
             options.targetName = value
         }
-    var targetParams: String
-        get() = options.targetParams ?: ""
+    var targetArgs: String
+        get() = options.targetArgs ?: ""
         set(value) {
-            options.targetParams = value
+            options.targetArgs = value
         }
     var pythonExe: String
         get() = options.pythonExe ?: "python3"
@@ -162,7 +162,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
 
     private var targetType = TargetType.MODULE
     private var targetName = ""
-    private var targetParams = ""
+    private var targetArgs = ""
     private var pythonExe = ""
     private var pythonOpts = ""
     private var pythonWorkDir = ""
@@ -198,7 +198,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
                 textField().bindText(::targetName)
             }
             it.row("Parameters:") {
-                expandableTextField().bindText(::targetParams)
+                expandableTextField().bindText(::targetArgs)
             }
             it.row("Python interpreter:") {
                 textField().bindText(::pythonExe)
@@ -241,7 +241,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
         config.let {
             targetType = it.targetType
             targetName = it.targetName
-            targetParams = it.targetParams
+            targetArgs = it.targetArgs
             pythonExe = it.pythonExe
             pythonOpts = it.pythonOpts
             pythonWorkDir = it.pythonWorkDir
@@ -276,7 +276,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
         config.let {
             it.targetType = targetType
             it.targetName = targetName
-            it.targetParams = targetParams
+            it.targetArgs = targetArgs
             it.pythonExe = pythonExe
             it.pythonOpts = pythonOpts
             it.pythonWorkDir = pythonWorkDir

@@ -168,7 +168,7 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
                 addParameter("-m")
             }
             addParameter(config.targetName)
-            addParameters(PosixCommandLine.split(config.targetParams))
+            addParameters(PosixCommandLine.split(config.targetArgs))
         }
         return command.commandLineString
     }

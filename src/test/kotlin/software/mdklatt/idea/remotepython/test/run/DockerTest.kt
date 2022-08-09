@@ -67,7 +67,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
         config.let {
             assertEquals(TargetType.MODULE, it.targetType)
             assertEquals("", it.targetName)
-            assertEquals("", it.targetParams)
+            assertEquals("", it.targetArgs)
             assertEquals("python3", it.pythonExe)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
@@ -88,7 +88,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
         config.let {
             it.targetType = TargetType.SCRIPT
             it.targetName = "app.py"
-            it.targetParams = "-h"
+            it.targetArgs = "-h"
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
@@ -104,7 +104,7 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             it.readExternal(element)
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
-            assertEquals(config.targetParams, it.targetParams)
+            assertEquals(config.targetArgs, it.targetArgs)
             assertEquals(config.pythonExe, it.pythonExe)
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
