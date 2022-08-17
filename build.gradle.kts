@@ -22,8 +22,9 @@ repositories {
 dependencies {
     implementation("org.apache.commons:commons-text:1.8")
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
-    testImplementation("org.junit.vintage:junit-vintage-engine:5.8.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.6.1")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter:5.8.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
 }
 
 intellij {
@@ -57,8 +58,10 @@ tasks {
     }
 
     patchPluginXml {
+        // Leave the upper bound undefined so that every new IDE release
+        // doesn't automatically break the plugin.
+        // untilBuild.set(properties("pluginUntilBuild"))
         sinceBuild.set(properties("pluginSinceBuild"))
-        untilBuild.set(properties("pluginUntilBuild"))
 
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
         pluginDescription.set(
