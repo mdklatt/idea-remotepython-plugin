@@ -22,9 +22,10 @@ repositories {
 dependencies {
     implementation("org.apache.commons:commons-text:1.8")
     testImplementation(kotlin("test"))
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.6.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter:5.8.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    testImplementation(platform("org.junit:junit-bom:5.8.2"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
 }
 
 intellij {
