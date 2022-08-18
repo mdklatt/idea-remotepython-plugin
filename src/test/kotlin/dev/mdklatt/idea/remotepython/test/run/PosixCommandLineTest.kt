@@ -1,9 +1,9 @@
-package software.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.test.run
 
 import kotlin.io.path.createTempFile
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.remotepython.run.PosixCommandLine
+import dev.mdklatt.idea.remotepython.run.PosixCommandLine
 import kotlin.test.assertNotNull
 
 

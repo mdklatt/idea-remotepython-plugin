@@ -1,7 +1,7 @@
 /**
  * IDEA run configurations for Remote Python execution.
  */
-package software.mdklatt.idea.remotepython.run
+package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.configurations.*
 import com.intellij.icons.AllIcons

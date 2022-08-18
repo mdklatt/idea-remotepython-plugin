@@ -1,7 +1,7 @@
 /**
- * Run Python in a Docker container.
+ * Run Python on a Vagrant machine.
  */
-package software.mdklatt.idea.remotepython.run
+package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
@@ -12,7 +12,6 @@ import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.Panel
-import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 
 
@@ -21,14 +20,14 @@ import com.intellij.ui.dsl.builder.bindText
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class DockerConfigurationFactory(type: RemotePythonConfigurationType) : ConfigurationFactory(type) {
+class VagrantConfigurationFactory(type: RemotePythonConfigurationType) : ConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
      * @param project the project in which the run configuration will be used
      * @return the run configuration instance
      */
-    override fun createTemplateConfiguration(project: Project) = DockerRunConfiguration(project, this, "")
+    override fun createTemplateConfiguration(project: Project) = VagrantRunConfiguration(project, this, "")
 
     /**
      * Returns the id of the run configuration that is used for serialization. For compatibility reason the default implementation calls
@@ -37,51 +36,43 @@ class DockerConfigurationFactory(type: RemotePythonConfigurationType) : Configur
      * by {@link #getName()} for compatibility but store it directly in the code instead of taking from a message bundle. For new configurations
      * you may use any unique ID; if a new {@link ConfigurationType} has a single {@link ConfigurationFactory}, use {@link SimpleConfigurationType} instead.
      */
-    override fun getId() = "RemotePythonDockerConfiguration"
+    override fun getId() = "RemotePythonVagrantConfiguration"
 
     /**
      * The name of the run configuration variant created by this factory.
      *
      * @return: name
      */
-    override fun getName() = "Docker Container"
+    override fun getName() = "Vagrant Machine"
 
     /**
      * Return the type of the options storage class.
      *
      * @return: options class type
      */
-    override fun getOptionsClass() = DockerOptions::class.java
+    override fun getOptionsClass() = VagrantOptions::class.java
 }
-
-/**
- * Docker host type.
- */
-enum class DockerHostType { IMAGE, CONTAINER, SERVICE }
-
 
 /**
  * Handle persistence of run configuration options.
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-configurationfactory">Run Configurations Tutorial</a>
  */
-class DockerOptions : RemotePythonOptions() {
-    internal var hostType by string()
+class VagrantOptions : RemotePythonOptions() {
     internal var hostName by string()
-    internal var dockerExe by string()
-    internal var dockerCompose by string()
-    internal var dockerOpts by string()
+    internal var vagrantExe by string()
+    internal var vagrantOpts by string()
     internal var localWorkDir by string()
 }
 
 
 /**
- * Run Configuration for executing Python in a <a href="https://www.docker.com">Docker</a> container.
+ * Run Configuration for executing Python on a <a href="https://www.vagrantup.com/">Vagrant</a> machine.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class DockerRunConfiguration(project: Project, factory: DockerConfigurationFactory, name: String) :
-    RemotePythonRunConfiguration<DockerOptions>(project, factory, name) {
+class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
+    RemotePythonRunConfiguration<VagrantOptions>(project, factory, name) {
 
     /**
      * Prepares for executing a specific instance of the run configuration.
@@ -90,7 +81,7 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) = DockerState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = VagrantState(this, environment)
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -100,32 +91,22 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = DockerEditor()
+    override fun getConfigurationEditor() = VagrantEditor()
 
-    var hostType: DockerHostType
-        get() = DockerHostType.valueOf(options.hostType ?: "IMAGE")
-        set(value) {
-            options.hostType = value.name
-        }
     var hostName: String
         get() = options.hostName ?: ""
         set(value) {
             options.hostName = value
         }
-    var dockerExe: String
-        get() = options.dockerExe ?: "docker"
+    var vagrantExe: String
+        get() = options.vagrantExe ?: "vagrant"
         set(value) {
-            options.dockerExe = value.ifBlank { "docker" }
+            options.vagrantExe = value.ifBlank { "vagrant" }
         }
-    var dockerOpts: String
-        get() = options.dockerOpts ?: ""
+    var vagrantOpts: String
+        get() = options.vagrantOpts ?: ""
         set(value) {
-            options.dockerOpts = value
-        }
-    var dockerCompose: String
-        get() = options.dockerCompose ?: ""
-        set(value) {
-            options.dockerCompose = value
+            options.vagrantOpts = value
         }
     var localWorkDir: String
         get() = options.localWorkDir ?: ""
@@ -142,9 +123,8 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
  * @param environment: execution environment
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class DockerState internal constructor(private val config: DockerRunConfiguration, environment: ExecutionEnvironment) :
-        CommandLineState(environment) {
-
+class VagrantState internal constructor(private val config: VagrantRunConfiguration, environment: ExecutionEnvironment) :
+    CommandLineState(environment) {
     /**
      * Starts the process.
      *
@@ -153,30 +133,12 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val runOptions = mapOf(
-            "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
-            "rm" to true,
-            "entrypoint" to ""
+        val command = PosixCommandLine(config.vagrantExe, listOf("ssh"))
+        val options = mutableMapOf<String, Any?>(
+            "command" to python()
         )
-        val command = PosixCommandLine(config.dockerExe)
-        when (config.hostType) {
-            DockerHostType.CONTAINER -> {
-                command.addParameter("exec")
-            }
-            DockerHostType.IMAGE -> {
-                command.addParameter("run")
-                command.addOptions(runOptions)
-            }
-            DockerHostType.SERVICE -> {
-                command.addParameter("compose")
-                command.addOptions(mapOf(
-                    "file" to config.dockerCompose.ifBlank { null }  // null to omit
-                ))
-                command.addParameter("run")
-                command.addOptions(runOptions)
-            }
-        }
-        command.addParameters(config.hostName, *python())
+        command.addOptions(options)
+        command.addParameter(config.hostName)
         if (config.localWorkDir.isNotBlank()) {
             command.setWorkDirectory(config.localWorkDir)
         }
@@ -193,16 +155,22 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
      *
      * @return: Python command string
      */
-    private fun python(): Array<String> {
+    private fun python(): String {
         val command = PosixCommandLine().apply {
-            withExePath(config.pythonExe)
+            if (config.pythonWorkDir.isNotBlank()) {
+                withExePath("cd")
+                addParameters(config.pythonWorkDir, "&&", config.pythonExe)
+            }
+            else {
+                withExePath(config.pythonExe)
+            }
             if (config.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
             addParameter(config.targetName)
             addParameters(PosixCommandLine.split(config.targetArgs))
         }
-        return PosixCommandLine.split(command.commandLineString).toTypedArray()
+        return command.commandLineString
     }
 }
 
@@ -212,36 +180,49 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class DockerEditor internal constructor() :
-    RemotePythonEditor<DockerOptions, DockerRunConfiguration>() {
+class VagrantEditor internal constructor() :
+    RemotePythonEditor<VagrantOptions, VagrantRunConfiguration>() {
 
-    private companion object {
-        val hostTypeOptions = mapOf(
-            DockerHostType.CONTAINER to "Container name:",
-            DockerHostType.IMAGE to "Image label:",
-            DockerHostType.SERVICE to "Compose service:",
-        )
-    }
-
-    private var hostType = DockerHostType.IMAGE
     private var hostName = ""
-    private var dockerExe = ""
-    private var dockerCompose = ""
-    private var dockerOpts = ""
+    private var vagrantExe = ""
+    private var vagrantOpts = ""
     private var localWorkDir = ""
 
     /**
-     * Reset UI component with local executor options from configuration.
+     * Add local executor settings to the UI component.
+     *
+     * @param parent: parent component builder
+     */
+    override fun addExecutorFields(parent: Panel) {
+        parent.run {
+            row("Vagrant machine:") {
+                textField().bindText(::hostName)
+            }
+            row("Vagrant executable:") {
+                textFieldWithBrowseButton("Vagrant Executable").bindText(::vagrantExe)
+            }
+            row("Vagrant options:") {
+                expandableTextField().bindText(::vagrantOpts)
+            }
+            row("Working directory") {
+                textFieldWithBrowseButton(
+                    browseDialogTitle = "Working Directory",
+                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                ).bindText(::localWorkDir)
+            }
+        }
+    }
+
+    /**
+     * Reset UI with local executor options from configuration.
      *
      * @param config: run configuration
      */
-    override fun resetExecutorOptions(config: DockerRunConfiguration) {
+    override fun resetExecutorOptions(config: VagrantRunConfiguration) {
         config.let {
-            hostType = it.hostType
             hostName = it.hostName
-            dockerExe = it.dockerExe
-            dockerCompose = it.dockerCompose
-            dockerOpts = it.dockerOpts
+            vagrantExe = it.vagrantExe
+            vagrantOpts = it.vagrantOpts
             localWorkDir = it.localWorkDir
         }
     }
@@ -251,46 +232,12 @@ class DockerEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun applyExecutorOptions(config: DockerRunConfiguration) {
+    override fun applyExecutorOptions(config: VagrantRunConfiguration) {
         config.let {
-            it.hostType = hostType
             it.hostName = hostName
-            it.dockerExe = dockerExe
-            it.dockerCompose = dockerCompose
-            it.dockerOpts = dockerOpts
+            it.vagrantExe = vagrantExe
+            it.vagrantOpts = vagrantOpts
             it.localWorkDir = localWorkDir
-        }
-    }
-
-    /**
-     * Add local executor settings to the UI component.
-     *
-     * @param parent: parent component builder
-     */
-    override fun addExecutorFields(parent: Panel) {
-        parent.run {
-            row {
-                comboBox(hostTypeOptions.values).bindItem(
-                    { hostTypeOptions[hostType] },
-                    { hostType = hostTypeOptions.getKey(it) },
-                )
-                textField().bindText(::hostName)
-            }
-            row("Docker executable:") {
-                textFieldWithBrowseButton("Docker Executable").bindText(::dockerExe)
-            }
-            row("Docker compose file:") {
-                textFieldWithBrowseButton("Docker Compose File").bindText(::dockerCompose)
-            }
-            row("Docker options:") {
-                expandableTextField().bindText(::dockerOpts)
-            }
-            row("Local working directory") {
-                textFieldWithBrowseButton(
-                    browseDialogTitle = "Local Working Directory",
-                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
-                ).bindText(::localWorkDir)
-            }
         }
     }
 }

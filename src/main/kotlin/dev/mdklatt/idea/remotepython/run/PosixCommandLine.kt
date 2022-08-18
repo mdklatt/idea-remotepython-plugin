@@ -1,4 +1,4 @@
-package software.mdklatt.idea.remotepython.run
+package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.util.execution.ParametersListUtil
@@ -113,7 +113,7 @@ class PosixCommandLine() : GeneralCommandLine() {
      * @param builder: filled ProcessBuilder
      * @return
      */
-    protected override fun buildProcess(builder: ProcessBuilder): ProcessBuilder {
+    override fun buildProcess(builder: ProcessBuilder): ProcessBuilder {
         // Override the base class to redirect STDIN so it can be written to
         // once the process has been started, cf. createProcess().
         if (inputData != null) {

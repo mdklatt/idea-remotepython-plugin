@@ -1,7 +1,7 @@
 /**
- * Run Python on a Vagrant machine.
+ * Run Python on an SSH host.
  */
-package software.mdklatt.idea.remotepython.run
+package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
@@ -20,14 +20,14 @@ import com.intellij.ui.dsl.builder.bindText
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#configuration-factory">Configuration Factory</a>
  */
-class VagrantConfigurationFactory(type: RemotePythonConfigurationType) : ConfigurationFactory(type) {
+class SecureShellConfigurationFactory(type: RemotePythonConfigurationType) : ConfigurationFactory(type) {
     /**
      * Creates a new template run configuration within the context of the specified project.
      *
      * @param project the project in which the run configuration will be used
      * @return the run configuration instance
      */
-    override fun createTemplateConfiguration(project: Project) = VagrantRunConfiguration(project, this, "")
+    override fun createTemplateConfiguration(project: Project) = SecureShellRunConfiguration(project, this, "")
 
     /**
      * Returns the id of the run configuration that is used for serialization. For compatibility reason the default implementation calls
@@ -36,21 +36,21 @@ class VagrantConfigurationFactory(type: RemotePythonConfigurationType) : Configu
      * by {@link #getName()} for compatibility but store it directly in the code instead of taking from a message bundle. For new configurations
      * you may use any unique ID; if a new {@link ConfigurationType} has a single {@link ConfigurationFactory}, use {@link SimpleConfigurationType} instead.
      */
-    override fun getId() = "RemotePythonVagrantConfiguration"
+    override fun getId() = "RemotePythonSecureShellConfiguration"
 
     /**
      * The name of the run configuration variant created by this factory.
      *
      * @return: name
      */
-    override fun getName() = "Vagrant Machine"
+    override fun getName() = "SSH Host"
 
     /**
      * Return the type of the options storage class.
      *
      * @return: options class type
      */
-    override fun getOptionsClass() = VagrantOptions::class.java
+    override fun getOptionsClass() = SecureShellOptions::class.java
 }
 
 /**
@@ -58,21 +58,22 @@ class VagrantConfigurationFactory(type: RemotePythonConfigurationType) : Configu
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-configurationfactory">Run Configurations Tutorial</a>
  */
-class VagrantOptions : RemotePythonOptions() {
+class SecureShellOptions : RemotePythonOptions() {
     internal var hostName by string()
-    internal var vagrantExe by string()
-    internal var vagrantOpts by string()
+    internal var hostUser by string()
+    internal var sshExe by string()
+    internal var sshOpts by string()
     internal var localWorkDir by string()
 }
 
 
 /**
- * Run Configuration for executing Python on a <a href="https://www.vagrantup.com/">Vagrant</a> machine.
+ * Run Configuration for executing Python via SSH.
  *
  * @see <a href="https://www.jetbrains.org/intellij/sdk/docs/basics/run_configurations/run_configuration_management.html#run-configuration">Run Configuration</a>
  */
-class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
-    RemotePythonRunConfiguration<VagrantOptions>(project, factory, name) {
+class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
+    RemotePythonRunConfiguration<SecureShellOptions>(project, factory, name) {
 
     /**
      * Prepares for executing a specific instance of the run configuration.
@@ -81,7 +82,7 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) = VagrantState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = SecureShellState(this, environment)
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -91,22 +92,27 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
      *
      * @return the settings editor component.
      */
-    override fun getConfigurationEditor() = VagrantEditor()
+    override fun getConfigurationEditor() = SecureShellEditor()
 
     var hostName: String
         get() = options.hostName ?: ""
         set(value) {
             options.hostName = value
         }
-    var vagrantExe: String
-        get() = options.vagrantExe ?: "vagrant"
+    var hostUser: String
+        get() = options.hostUser ?: ""
         set(value) {
-            options.vagrantExe = value.ifBlank { "vagrant" }
+            options.hostUser = value
         }
-    var vagrantOpts: String
-        get() = options.vagrantOpts ?: ""
+    var sshExe: String
+        get() = options.sshExe ?: "ssh"
         set(value) {
-            options.vagrantOpts = value
+            options.sshExe = value.ifBlank { "ssh" }
+        }
+    var sshOpts: String
+        get() = options.sshOpts ?: ""
+        set(value) {
+            options.sshOpts = value
         }
     var localWorkDir: String
         get() = options.localWorkDir ?: ""
@@ -123,7 +129,7 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
  * @param environment: execution environment
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class VagrantState internal constructor(private val config: VagrantRunConfiguration, environment: ExecutionEnvironment) :
+class SecureShellState internal constructor(private val config: SecureShellRunConfiguration, environment: ExecutionEnvironment) :
     CommandLineState(environment) {
     /**
      * Starts the process.
@@ -133,12 +139,15 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-        val command = PosixCommandLine(config.vagrantExe, listOf("ssh"))
-        val options = mutableMapOf<String, Any?>(
-            "command" to python()
-        )
-        command.addOptions(options)
-        command.addParameter(config.hostName)
+        val command = PosixCommandLine(config.sshExe)
+        if (config.sshOpts.isNotBlank()) {
+            command.addParameters(PosixCommandLine.split(config.sshOpts))
+        }
+        var host = config.hostName
+        if (config.hostUser.isNotBlank()) {
+            host = config.hostUser + "@" + host
+        }
+        command.addParameters(host, python())
         if (config.localWorkDir.isNotBlank()) {
             command.setWorkDirectory(config.localWorkDir)
         }
@@ -156,6 +165,7 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
      * @return: Python command string
      */
     private fun python(): String {
+        // TODO: Identical to VagrantState.
         val command = PosixCommandLine().apply {
             if (config.pythonWorkDir.isNotBlank()) {
                 withExePath("cd")
@@ -180,12 +190,13 @@ class VagrantState internal constructor(private val config: VagrantRunConfigurat
  *
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#bind-the-ui-form">Run Configurations Tutorial</a>
  */
-class VagrantEditor internal constructor() :
-    RemotePythonEditor<VagrantOptions, VagrantRunConfiguration>() {
+class SecureShellEditor internal constructor() :
+    RemotePythonEditor<SecureShellOptions, SecureShellRunConfiguration>() {
 
     private var hostName = ""
-    private var vagrantExe = ""
-    private var vagrantOpts = ""
+    private var hostUser = ""
+    private var sshExe = ""
+    private var sshOpts = ""
     private var localWorkDir = ""
 
     /**
@@ -195,21 +206,20 @@ class VagrantEditor internal constructor() :
      */
     override fun addExecutorFields(parent: Panel) {
         parent.run {
-            row("Vagrant machine:") {
-                textField().bindText(::hostName)
+            row("SSH executable:") {
+                textFieldWithBrowseButton("SSH Executable").bindText(::sshExe)
             }
-            row("Vagrant executable:") {
-                textFieldWithBrowseButton("Vagrant Executable").bindText(::vagrantExe)
+            row("SSH options:") {
+                expandableTextField().bindText(::sshOpts)
             }
-            row("Vagrant options:") {
-                expandableTextField().bindText(::vagrantOpts)
-            }
-            row("Working directory") {
+            row("Local working directory") {
+                // TODO: Is this necessary for SSH?
                 textFieldWithBrowseButton(
-                    browseDialogTitle = "Working Directory",
+                    browseDialogTitle = "Local Working Directory",
                     fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
                 ).bindText(::localWorkDir)
             }
+
         }
     }
 
@@ -218,11 +228,12 @@ class VagrantEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun resetExecutorOptions(config: VagrantRunConfiguration) {
+    override fun resetExecutorOptions(config: SecureShellRunConfiguration) {
         config.let {
             hostName = it.hostName
-            vagrantExe = it.vagrantExe
-            vagrantOpts = it.vagrantOpts
+            hostUser = it.hostUser
+            sshExe = it.sshExe
+            sshOpts = it.sshOpts
             localWorkDir = it.localWorkDir
         }
     }
@@ -232,11 +243,12 @@ class VagrantEditor internal constructor() :
      *
      * @param config: run configuration
      */
-    override fun applyExecutorOptions(config: VagrantRunConfiguration) {
+    override fun applyExecutorOptions(config: SecureShellRunConfiguration) {
         config.let {
             it.hostName = hostName
-            it.vagrantExe = vagrantExe
-            it.vagrantOpts = vagrantOpts
+            it.hostUser = hostUser
+            it.sshExe = sshExe
+            it.sshOpts = sshOpts
             it.localWorkDir = localWorkDir
         }
     }

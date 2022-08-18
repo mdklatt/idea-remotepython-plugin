@@ -1,8 +1,8 @@
-package software.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.test.run
 
 import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.remotepython.run.getKey
+import dev.mdklatt.idea.remotepython.run.getKey
 import kotlin.test.assertFailsWith
 
 

@@ -1,11 +1,11 @@
 /**
  * Unit tests for the Python module.
  */
-package software.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.test.run
 
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
-import software.mdklatt.idea.remotepython.run.RemotePythonConfigurationType
+import dev.mdklatt.idea.remotepython.run.RemotePythonConfigurationType
 import kotlin.test.assertNotNull
 
 

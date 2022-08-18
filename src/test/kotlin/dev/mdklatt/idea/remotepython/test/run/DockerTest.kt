@@ -1,11 +1,11 @@
 /**
- * Unit tests for the Vagrant module.
+ * Unit tests for the Docker module.
  */
-package software.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.test.run
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import dev.mdklatt.idea.remotepython.run.*
 import org.jdom.Element
-import software.mdklatt.idea.remotepython.run.*
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -16,18 +16,18 @@ import software.mdklatt.idea.remotepython.run.*
 
 
 /**
- * Unit tests for the VagrantConfigurationFactory class.
+ * Unit tests for the DockerConfigurationFactory class.
  */
-internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
+internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
 
-    private lateinit var factory: VagrantConfigurationFactory
+    private lateinit var factory: DockerConfigurationFactory
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
+        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -37,27 +37,27 @@ internal class VagrantConfigurationFactoryTest : BasePlatformTestCase() {
         // Just a smoke test to ensure that the expected RunConfiguration type
         // is returned.
         factory.createTemplateConfiguration(project).let {
-            assertTrue(it.vagrantExe.isNotBlank())
+            assertTrue(it.dockerExe.isNotBlank())
         }
     }
 }
 
 
 /**
- * Unit tests for the VagrantRunConfiguration class.
+ * Unit tests for the DockerRunConfiguration class.
  */
-internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
+internal class DockerRunConfigurationTest : BasePlatformTestCase() {
 
-    private lateinit var factory: VagrantConfigurationFactory
-    private lateinit var config: VagrantRunConfiguration
+    private lateinit var factory: DockerConfigurationFactory
+    private lateinit var config: DockerRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
-        config = VagrantRunConfiguration(project, factory, "Vagrant Python Test")
+        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        config = DockerRunConfiguration(project, factory, "Docker Python Test")
     }
 
     /**
@@ -72,9 +72,11 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
             assertEquals("", it.pythonWorkDir)
+            assertEquals(DockerHostType.IMAGE, it.hostType)
             assertEquals("", it.hostName)
-            assertEquals("vagrant", it.vagrantExe)
-            assertEquals("", it.vagrantOpts)
+            assertEquals("docker", it.dockerExe)
+            assertEquals("", it.dockerOpts)
+            assertEquals("", it.dockerCompose)
         }
     }
 
@@ -90,13 +92,15 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
-            it.pythonWorkDir = "/tmp"
+            it.pythonWorkDir = "/opt/app"
+            it.hostType = DockerHostType.SERVICE
             it.hostName = "app"
-            it.vagrantExe = "/bin/vagrant"
-            it.vagrantOpts = "-v"
+            it.dockerExe = "/bin/docker"
+            it.dockerOpts = "--rm"
+            it.dockerCompose = "compose.yml"
             it.writeExternal(element)
         }
-        VagrantRunConfiguration(project, factory, "Persistence Test").let {
+        DockerRunConfiguration(project, factory, "Persistence Test").let {
             it.readExternal(element)
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
@@ -105,27 +109,29 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
             assertEquals(config.pythonWorkDir, it.pythonWorkDir)
+            assertEquals(config.hostType, it.hostType)
             assertEquals(config.hostName, it.hostName)
-            assertEquals(config.vagrantExe, it.vagrantExe)
-            assertEquals(config.vagrantOpts, it.vagrantOpts)
+            assertEquals(config.dockerExe, it.dockerExe)
+            assertEquals(config.dockerOpts, it.dockerOpts)
+            assertEquals(config.dockerCompose, it.dockerCompose)
         }
     }
 }
 
 
 /**
- * Unit tests for the VagrantEditor class.
+ * Unit tests for the DockerEditor class.
  */
-internal class VagrantEditorTest : BasePlatformTestCase() {
+internal class DockerEditorTest : BasePlatformTestCase() {
 
-    private lateinit var editor: VagrantEditor
+    private lateinit var editor: DockerEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        editor = VagrantEditor()
+        editor = DockerEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot
