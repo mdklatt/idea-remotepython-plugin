@@ -59,10 +59,8 @@ tasks {
     }
 
     patchPluginXml {
-        // Leave the upper bound undefined so that every new IDE release
-        // doesn't automatically break the plugin.
-        // untilBuild.set(properties("pluginUntilBuild"))
         sinceBuild.set(properties("pluginSinceBuild"))
+        untilBuild.set(properties("pluginUntilBuild"))
 
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
         pluginDescription.set(
