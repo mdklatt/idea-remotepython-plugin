@@ -1,4 +1,4 @@
-package dev.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.run.test
 
 import kotlin.io.path.createTempFile
 import kotlin.test.assertEquals

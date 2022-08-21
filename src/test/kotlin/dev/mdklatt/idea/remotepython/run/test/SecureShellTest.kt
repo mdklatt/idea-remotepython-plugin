@@ -1,7 +1,7 @@
 /**
- * Unit tests for the Docker module.
+ * Unit tests for the SecureShell module.
  */
-package dev.mdklatt.idea.remotepython.test.run
+package dev.mdklatt.idea.remotepython.run.test
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import dev.mdklatt.idea.remotepython.run.*
@@ -16,18 +16,18 @@ import org.jdom.Element
 
 
 /**
- * Unit tests for the DockerConfigurationFactory class.
+ * Unit tests for the SecureShellConfigurationFactory class.
  */
-internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
+internal class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
 
-    private lateinit var factory: DockerConfigurationFactory
+    private lateinit var factory: SecureShellConfigurationFactory
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
     }
 
     /**
@@ -37,27 +37,27 @@ internal class DockerConfigurationFactoryTest : BasePlatformTestCase() {
         // Just a smoke test to ensure that the expected RunConfiguration type
         // is returned.
         factory.createTemplateConfiguration(project).let {
-            assertTrue(it.dockerExe.isNotBlank())
+            assertTrue(it.sshExe.isNotBlank())
         }
     }
 }
 
 
 /**
- * Unit tests for the DockerRunConfiguration class.
+ * Unit tests for the SecureShellRunConfiguration class.
  */
-internal class DockerRunConfigurationTest : BasePlatformTestCase() {
+internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
 
-    private lateinit var factory: DockerConfigurationFactory
-    private lateinit var config: DockerRunConfiguration
+    private lateinit var factory: SecureShellConfigurationFactory
+    private lateinit var config: SecureShellRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        factory = DockerConfigurationFactory(RemotePythonConfigurationType())
-        config = DockerRunConfiguration(project, factory, "Docker Python Test")
+        factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
+        config = SecureShellRunConfiguration(project, factory, "SecureShell Python Test")
     }
 
     /**
@@ -72,11 +72,10 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
             assertEquals("", it.pythonWorkDir)
-            assertEquals(DockerHostType.IMAGE, it.hostType)
             assertEquals("", it.hostName)
-            assertEquals("docker", it.dockerExe)
-            assertEquals("", it.dockerOpts)
-            assertEquals("", it.dockerCompose)
+            assertEquals("", it.hostUser)
+            assertEquals("ssh", it.sshExe)
+            assertEquals("", it.sshOpts)
         }
     }
 
@@ -92,15 +91,14 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             it.pythonExe = "/bin/python"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
-            it.pythonWorkDir = "/opt/app"
-            it.hostType = DockerHostType.SERVICE
+            it.pythonWorkDir = "/tmp"
             it.hostName = "app"
-            it.dockerExe = "/bin/docker"
-            it.dockerOpts = "--rm"
-            it.dockerCompose = "compose.yml"
+            it.hostUser = "dave"
+            it.sshExe = "/bin/ssh"
+            it.sshOpts = "-v"
             it.writeExternal(element)
         }
-        DockerRunConfiguration(project, factory, "Persistence Test").let {
+        SecureShellRunConfiguration(project, factory, "Persistence Test").let {
             it.readExternal(element)
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
@@ -109,29 +107,28 @@ internal class DockerRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonOpts, it.pythonOpts)
             assertEquals(config.localWorkDir, it.localWorkDir)
             assertEquals(config.pythonWorkDir, it.pythonWorkDir)
-            assertEquals(config.hostType, it.hostType)
             assertEquals(config.hostName, it.hostName)
-            assertEquals(config.dockerExe, it.dockerExe)
-            assertEquals(config.dockerOpts, it.dockerOpts)
-            assertEquals(config.dockerCompose, it.dockerCompose)
+            assertEquals(config.hostUser, it.hostUser)
+            assertEquals(config.sshExe, it.sshExe)
+            assertEquals(config.sshOpts, it.sshOpts)
         }
     }
 }
 
 
 /**
- * Unit tests for the DockerEditor class.
+ * Unit tests for the SecureShellEditor class.
  */
-internal class DockerEditorTest : BasePlatformTestCase() {
+internal class SecureShellEditorTest : BasePlatformTestCase() {
 
-    private lateinit var editor: DockerEditor
+    private lateinit var editor: SecureShellEditor
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        editor = DockerEditor()
+        editor = SecureShellEditor()
     }
 
     // TODO: https://github.com/JetBrains/intellij-ui-test-robot
