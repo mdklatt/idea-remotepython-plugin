@@ -5,6 +5,7 @@ package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.configurations.*
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
@@ -12,6 +13,9 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import org.jdom.Element
+import java.lang.RuntimeException
+import java.util.UUID
 
 
 /**
@@ -79,6 +83,7 @@ enum class TargetType { MODULE, SCRIPT }  // TODO: internal
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-configurationfactory">Run Configurations Tutorial</a>
  */
 abstract class RemotePythonOptions : RunConfigurationOptions() {
+    internal var uid by string()
     internal var targetType by string()
     internal var targetName by string()
     internal var targetArgs by string()
@@ -102,6 +107,8 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
 ) :
     RunConfigurationBase<Options>(project, factory, name) {
 
+    protected val logger = Logger.getInstance(this::class.java)
+
     final override fun getOptions(): Options {
         // Kotlin considers this an unsafe cast because generics do not have
         // runtime type information unless they are reified, which is not
@@ -110,7 +117,32 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         return super.getOptions() as Options
     }
 
+    override fun readExternal(element: Element) {
+        super.readExternal(element)
+        if (options.uid == null) {
+            options.uid = UUID.randomUUID().toString()
+        }
+    }
+    override fun writeExternal(element: Element) {
+        val default = element.getAttributeValue("default")?.toBoolean() ?: false
+        if (default) {
+            // Do not save UID with configuration template.
+            options.uid = null
+        }
+        super.writeExternal(element)
+    }
     // TODO: Why can't options.<property> be used as a delegate?
+
+    var uid: String
+        get() {
+            if (options.uid == null) {
+                options.uid = UUID.randomUUID().toString()
+            }
+            return options.uid ?: throw RuntimeException("null UID")
+        }
+        set(value) {
+            options.uid = value
+        }
 
     var targetType: TargetType
         get() = TargetType.valueOf(options.targetType ?: "MODULE")

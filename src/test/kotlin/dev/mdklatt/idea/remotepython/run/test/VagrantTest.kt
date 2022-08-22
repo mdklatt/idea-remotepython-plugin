@@ -65,6 +65,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
      */
     fun testConstructor() {
         config.let {
+            assertTrue(it.uid.isNotBlank())
             assertEquals(TargetType.MODULE, it.targetType)
             assertEquals("", it.targetName)
             assertEquals("", it.targetArgs)
@@ -98,6 +99,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
         }
         VagrantRunConfiguration(project, factory, "Persistence Test").let {
             it.readExternal(element)
+            assertTrue(it.uid.isNotBlank())
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
             assertEquals(config.targetArgs, it.targetArgs)
