@@ -3,11 +3,13 @@
  */
 package dev.mdklatt.idea.remotepython.run.test
 
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import dev.mdklatt.idea.remotepython.run.*
 import kotlin.test.assertContentEquals
 import kotlin.test.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.AfterEach
-import dev.mdklatt.idea.remotepython.run.StoredPassword
+import org.junit.jupiter.api.Assertions
 
 
 /**
@@ -23,7 +25,7 @@ internal class StoredPasswordTest {
      */
     @AfterEach
     fun tearDown() {
-        password.value = null  // remove from password store
+        password.value = null  // remove from credential store
     }
 
     /**
@@ -53,3 +55,33 @@ internal class StoredPasswordTest {
         assertNull(password.value)
     }
  }
+
+
+// The IDEA platform tests use JUnit3, so method names are used to determine
+// behavior instead of annotations. Notably, test classes are *not* constructed
+// before each test, so setUp() methods should be used for initialization.
+// Also, test functions must be named `testXXX` or they will not be found
+// during automatic discovery.
+
+/**
+ * Unit tests for the PasswordDialog class.
+ */
+internal class PasswordDialogTest : BasePlatformTestCase() {
+
+    private lateinit var dialog: PasswordDialog
+
+    /**
+     * Per-test initialization.
+     */
+    override fun setUp() {
+        super.setUp()
+        dialog = PasswordDialog("Password Test")
+    }
+
+    /**
+     * Test the primary constructor.
+     */
+    fun testConstructor() {
+        Assertions.assertEquals("Password Test", dialog.title)
+    }
+}

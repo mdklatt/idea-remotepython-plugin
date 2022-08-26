@@ -8,6 +8,10 @@ import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.dsl.builder.*
+import javax.swing.JComponent
+import javax.swing.JPasswordField
 
 
 /**
@@ -27,7 +31,7 @@ internal class StoredPassword(key: String) {
     private val service = generateServiceName(this::class.java.getPackage().name, key)
     private val credentialAttributes = CredentialAttributes(service)
 
-    public var value: CharArray?
+    var value: CharArray?
         get() {
             logger.debug("Loading password from credential store for $service")
             return PasswordSafe.instance.getPassword(credentialAttributes)?.toCharArray()
@@ -41,4 +45,44 @@ internal class StoredPassword(key: String) {
                 PasswordSafe.instance.set(credentialAttributes, null)
             }
         }
+}
+
+
+/**
+ * Modal dialog for a password prompt.
+ */
+internal class PasswordDialog(title: String = "Password", private val prompt: String = "Password:") :
+    DialogWrapper(false) {
+
+    private var password = charArrayOf()
+
+    init {
+        init()
+        setTitle(title)
+    }
+
+    /**
+     * Prompt the user for the password.
+     *
+     * @return user input
+     */
+    fun getPassword(): CharArray? = if (showAndGet()) password else null
+
+    /**
+     * Define dialog contents.
+     *
+     * @return: dialog contents
+     */
+    override fun createCenterPanel(): JComponent {
+        // https://plugins.jetbrains.com/docs/intellij/kotlin-ui-dsl-version-2.html
+        return panel{
+            row("${prompt}:") {
+                cell(JPasswordField("", 20)).bind(
+                    componentGet = JPasswordField::getPassword,
+                    componentSet = { field, value -> field.text = value.joinToString("") },
+                    prop = ::password.toMutableProperty()
+                )
+            }
+        }
+    }
 }
