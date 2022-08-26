@@ -11,8 +11,10 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.ui.dsl.builder.Panel
-import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.*
+import org.jdom.Element
+import java.awt.event.ItemEvent
+import javax.swing.JPasswordField
 
 
 /**
@@ -61,6 +63,7 @@ class SecureShellConfigurationFactory(type: RemotePythonConfigurationType) : Con
 class SecureShellOptions : RemotePythonOptions() {
     internal var hostName by string()
     internal var hostUser by string()
+    internal var hostPassPrompt by property(false)
     internal var sshExe by string()
     internal var sshOpts by string()
     internal var localWorkDir by string()
@@ -104,6 +107,16 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
         set(value) {
             options.hostUser = value
         }
+
+    internal val hostPass: StoredPassword
+        get() = StoredPassword(uid)  // need password for current UID
+
+    var hostPassPrompt: Boolean
+        get() = options.hostPassPrompt
+        set(value) {
+            options.hostPassPrompt = value
+        }
+
     var sshExe: String
         get() = options.sshExe ?: "ssh"
         set(value) {
@@ -119,6 +132,15 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
         set(value) {
             options.localWorkDir = value
         }
+
+    override fun writeExternal(element: Element) {
+        if (hostPassPrompt) {
+            // Do not use saved password.
+            hostPass.value = null
+        }
+        super.writeExternal(element)
+
+    }
 }
 
 
@@ -139,6 +161,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
+
         val command = PosixCommandLine(config.sshExe)
         if (config.sshOpts.isNotBlank()) {
             command.addParameters(PosixCommandLine.split(config.sshOpts))
@@ -150,6 +173,20 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
         command.addParameters(host, python())
         if (config.localWorkDir.isNotBlank()) {
             command.setWorkDirectory(config.localWorkDir)
+        }
+        val password = if (config.hostPassPrompt) {
+            // Prompt user for password.
+            val dialog = PasswordDialog(prompt = "Password for $host")
+            dialog.getPassword() ?: throw RuntimeException("no password")
+        } else {
+            // Check for stored password.
+            config.hostPass.value ?: charArrayOf()
+        }
+        if (password.isNotEmpty()) {
+            // Unfortunately, SSH password prompts aren't as simple as putting
+            // the value into STDIN.
+            // FIXME: cf. https://www.systutorials.com/docs/linux/man/1-sshpass
+            command.withInput(password)
         }
         if (!command.environment.contains("TERM")) {
             command.environment["TERM"] = "xterm-256color"
@@ -195,6 +232,8 @@ class SecureShellEditor internal constructor() :
 
     private var hostName = ""
     private var hostUser = ""
+    private var hostPass = charArrayOf()
+    private var hostPassPrompt = false
     private var sshExe = ""
     private var sshOpts = ""
     private var localWorkDir = ""
@@ -206,6 +245,35 @@ class SecureShellEditor internal constructor() :
      */
     override fun addExecutorFields(parent: Panel) {
         parent.run {
+            row("Host name:") {
+                textField().bindText(::hostName)
+            }
+            row("Host user:") {
+                textField().bindText(::hostUser)
+            }
+            row("Host password:") {
+                val password = JPasswordField("", 20)
+                cell(password).applyIfEnabled().bind(
+                    JPasswordField::getPassword,
+                    { field, value -> field.text = value.joinToString("") },
+                    ::hostPass.toMutableProperty()
+                )
+                checkBox("Prompt for password").let {
+                    it.bindSelected(::hostPassPrompt)
+                    it.component.addItemListener{ event ->
+                        // Selecting this checkbox disables the password field,
+                        // and the user will instead be prompted for a password
+                        // at runtime.
+                        if (event.stateChange == ItemEvent.SELECTED) {
+                            password.text = ""
+                            password.isEnabled = false
+                        }
+                        else {
+                            password.isEnabled = true
+                        }
+                    }
+                }
+            }
             row("SSH executable:") {
                 textFieldWithBrowseButton("SSH Executable").bindText(::sshExe)
             }
@@ -232,6 +300,8 @@ class SecureShellEditor internal constructor() :
         config.let {
             hostName = it.hostName
             hostUser = it.hostUser
+            hostPass = it.hostPass.value ?: charArrayOf()
+            hostPassPrompt = it.hostPassPrompt
             sshExe = it.sshExe
             sshOpts = it.sshOpts
             localWorkDir = it.localWorkDir
@@ -247,6 +317,8 @@ class SecureShellEditor internal constructor() :
         config.let {
             it.hostName = hostName
             it.hostUser = hostUser
+            it.hostPassPrompt = hostPassPrompt
+            it.hostPass.value = hostPass
             it.sshExe = sshExe
             it.sshOpts = sshOpts
             it.localWorkDir = localWorkDir

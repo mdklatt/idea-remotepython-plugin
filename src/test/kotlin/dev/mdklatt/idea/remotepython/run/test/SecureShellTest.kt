@@ -5,6 +5,7 @@ package dev.mdklatt.idea.remotepython.run.test
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import dev.mdklatt.idea.remotepython.run.*
+import kotlin.test.assertContentEquals
 import org.jdom.Element
 
 
@@ -61,6 +62,13 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
     }
 
     /**
+     * Per-test teardown.
+     */
+    override fun tearDown() {
+        config.hostPass.value = null  // remove from credential store
+    }
+
+    /**
      * Test the primary constructor.
      */
     fun testConstructor() {
@@ -75,6 +83,8 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.pythonWorkDir)
             assertEquals("", it.hostName)
             assertEquals("", it.hostUser)
+            assertNull(it.hostPass.value)
+            assertFalse(it.hostPassPrompt)
             assertEquals("ssh", it.sshExe)
             assertEquals("", it.sshOpts)
         }
@@ -94,14 +104,15 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             it.localWorkDir = "./"
             it.pythonWorkDir = "/tmp"
             it.hostName = "app"
-            it.hostUser = "dave"
+            it.hostUser = "jdoe"
+            it.hostPass.value = charArrayOf('1', '2', '3', '4')
             it.sshExe = "/bin/ssh"
             it.sshOpts = "-v"
             it.writeExternal(element)
         }
         SecureShellRunConfiguration(project, factory, "Persistence Test").let {
             it.readExternal(element)
-            assertTrue(it.uid.isNotBlank())
+            assertEquals(config.uid, it.uid)
             assertEquals(config.targetType, it.targetType)
             assertEquals(config.targetName, it.targetName)
             assertEquals(config.targetArgs, it.targetArgs)
@@ -111,8 +122,29 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             assertEquals(config.pythonWorkDir, it.pythonWorkDir)
             assertEquals(config.hostName, it.hostName)
             assertEquals(config.hostUser, it.hostUser)
+            assertNotNull(it.hostPass.value)
+            assertContentEquals(config.hostPass.value, it.hostPass.value)
             assertEquals(config.sshExe, it.sshExe)
             assertEquals(config.sshOpts, it.sshOpts)
+        }
+    }
+
+    /**
+     * Test behavior of the hostPassPrompt field.
+     */
+    fun testHostPassPrompt() {
+        val element = Element("configuration")
+        config.let {
+            it.hostPass.value = charArrayOf('1', '2', '3', '4')
+            it.hostPassPrompt = true
+            it.writeExternal(element)
+        }
+        SecureShellRunConfiguration(project, factory, "Password Prompt Test").let {
+            // Enabling the password prompt should remove the stored password.
+            it.readExternal(element)
+            assertNull(config.hostPass.value)
+            assertNull(it.hostPass.value)
+            assertTrue(it.hostPassPrompt)
         }
     }
 }
