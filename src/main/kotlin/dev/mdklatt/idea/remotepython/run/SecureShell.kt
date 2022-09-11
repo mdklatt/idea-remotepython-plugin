@@ -14,7 +14,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.*
 import org.jdom.Element
 import java.awt.event.ItemEvent
+import java.io.File
+import java.io.FileOutputStream
 import javax.swing.JPasswordField
+import kotlin.io.path.createTempFile
+import kotlin.io.path.Path
 
 
 /**
@@ -153,6 +157,7 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
  */
 class SecureShellState internal constructor(private val config: SecureShellRunConfiguration, environment: ExecutionEnvironment) :
     CommandLineState(environment) {
+
     /**
      * Starts the process.
      *
@@ -161,7 +166,13 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
      * @see com.intellij.execution.process.OSProcessHandler
      */
     override fun startProcess(): ProcessHandler {
-
+        // The system SSH client is used here instead of a JVM implementation
+        // (e.g. https://github.com/hierynomus/sshj) to take advantage of the
+        // user's existing SSH setup (SSH keys, host keys, agent forwarding,
+        // forwarding, jump hosts, etc.). Otherwise, all of these features
+        // would have to be implemented here. The drawback of this is that it
+        // requires an SSH client to be installed on the local machine,
+        // specifically one compatible with OpenSSH, whose API is used here.
         val command = PosixCommandLine(config.sshExe)
         if (config.sshOpts.isNotBlank()) {
             command.addParameters(PosixCommandLine.split(config.sshOpts))
@@ -183,10 +194,26 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
             config.hostPass.value ?: charArrayOf()
         }
         if (password.isNotEmpty()) {
-            // Unfortunately, SSH password prompts aren't as simple as putting
-            // the value into STDIN.
-            // FIXME: cf. https://www.systutorials.com/docs/linux/man/1-sshpass
-            command.withInput(password)
+            // Submit the password to `ssh` non-interactively. If OpenSSH is
+            // running in a GUI environment, as in this case, it disables its
+            // own password prompt and instead executes $SSH_ASKPASS. This
+            // must point to an executable that prints the password to STDOUT.
+            // $DISPLAY must also be set for this to work, which is inherited
+            // from the parent IDEA environment here.
+            // <https://linux.die.net/man/1/ssh>
+            //
+            // $SSH_PASSWORD is an implementation detail of this function used
+            // to pass a value to the askpass executable. While the environment
+            // variable itself is (mostly) secure because it's local to the
+            // subprocess environment, the conversion of `password` to a string
+            // here places it in JVM memory until it is garbage collected. This
+            // is less secure, but if an attacker has access to system memory,
+            // this is a moot point.
+            // <https://stackoverflow.com/q/8881291>
+            command.withEnvironment(mapOf(
+                "SSH_ASKPASS" to askPassExe.canonicalPath,
+                "SSH_PASSWORD" to password.joinToString(""),
+            ))
         }
         if (!command.environment.contains("TERM")) {
             command.environment["TERM"] = "xterm-256color"
@@ -218,6 +245,32 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
             addParameters(PosixCommandLine.split(config.targetArgs))
         }
         return command.commandLineString
+    }
+
+    companion object {
+
+        // TODO: Use askpass.bat if this is Windows.
+        private val askPassExe: File by lazy { createAskPassExe("askpass") }
+
+        /**
+         * Create the askpass executable.
+         *
+         * @param script: resource name of the script source file
+         */
+        private fun createAskPassExe(source: String): File {
+            // This must be a physical file that is executable by the system
+            // SSH client, at least for OpenSSH. The approach used here is to
+            // bundle OS-specific scripts as module resources and write the
+            // appropriate one to a temporary executable file.
+            return createTempFile("askpass").toFile().also {
+                it.deleteOnExit()
+                val input = this::class.java.getResourceAsStream("/${source}")
+                    ?: throw RuntimeException("could not get askpass script")
+                input.transferTo(FileOutputStream(it))
+                it.setWritable(false)
+                it.setExecutable(true)
+            }
+        }
     }
 }
 

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Use this as the value of $SSH_ASKPASS to provide the value of $SSH_PASSWORD
+# to `ssh`
+echo "${SSH_PASSWORD}"
