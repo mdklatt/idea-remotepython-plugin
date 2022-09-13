@@ -16,6 +16,7 @@ import org.jdom.Element
 import java.awt.event.ItemEvent
 import java.io.File
 import java.io.FileOutputStream
+import java.util.*
 import javax.swing.JPasswordField
 import kotlin.io.path.createTempFile
 import kotlin.io.path.Path
@@ -208,7 +209,8 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
             // subprocess environment, the conversion of `password` to a string
             // here places it in JVM memory until it is garbage collected. This
             // is less secure, but if an attacker has access to system memory,
-            // this is a moot point.
+            // this is a moot point. The askpass executable will unset this
+            // variable when it exits.
             // <https://stackoverflow.com/q/8881291>
             command.withEnvironment(mapOf(
                 "SSH_ASKPASS" to askPassExe.canonicalPath,
@@ -249,22 +251,24 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
 
     companion object {
 
-        // TODO: Use askpass.bat if this is Windows.
-        private val askPassExe: File by lazy { createAskPassExe("askpass") }
+        private val askPassExe: File by lazy { createAskPassExe() }
 
         /**
          * Create the askpass executable.
-         *
-         * @param script: resource name of the script source file
          */
-        private fun createAskPassExe(source: String): File {
+        private fun createAskPassExe(): File {
             // This must be a physical file that is executable by the system
             // SSH client, at least for OpenSSH. The approach used here is to
             // bundle OS-specific scripts as module resources and write the
-            // appropriate one to a temporary executable file.
-            return createTempFile("askpass").toFile().also {
+            // appropriate one to a temporary executable file. All non-Windows
+            // environments are assumed to be *nix.
+            // TODO: Windows execution is untested.
+            val isWindows = System.getProperty("os.name").lowercase(Locale.getDefault()).contains("windows")
+            val script = if (isWindows) "askpass.bat" else "askpass"
+            val suffix = if (isWindows) ".bat" else ""
+            return createTempFile("askpass", suffix).toFile().also {
                 it.deleteOnExit()
-                val input = this::class.java.getResourceAsStream("/${source}")
+                val input = this::class.java.getResourceAsStream("/${script}")
                     ?: throw RuntimeException("could not get askpass script")
                 input.transferTo(FileOutputStream(it))
                 it.setWritable(false)
