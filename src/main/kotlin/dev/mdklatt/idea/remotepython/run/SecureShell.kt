@@ -12,6 +12,10 @@ import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.*
+import dev.mdklatt.idea.common.exec.CommandLine
+import dev.mdklatt.idea.common.exec.PosixCommandLine
+import dev.mdklatt.idea.common.password.PasswordDialog
+import dev.mdklatt.idea.common.password.StoredPassword
 import org.jdom.Element
 import java.awt.event.ItemEvent
 import java.io.File
@@ -19,7 +23,6 @@ import java.io.FileOutputStream
 import java.util.*
 import javax.swing.JPasswordField
 import kotlin.io.path.createTempFile
-import kotlin.io.path.Path
 
 
 /**
@@ -176,7 +179,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
         // specifically one compatible with OpenSSH, whose API is used here.
         val command = PosixCommandLine(config.sshExe)
         if (config.sshOpts.isNotBlank()) {
-            command.addParameters(PosixCommandLine.split(config.sshOpts))
+            command.addParameters(CommandLine.split(config.sshOpts))
         }
         var host = config.hostName
         if (config.hostUser.isNotBlank()) {
@@ -188,7 +191,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
         }
         val password = if (config.hostPassPrompt) {
             // Prompt user for password.
-            val dialog = PasswordDialog(prompt = "Password for $host")
+            val dialog = PasswordDialog("SSH Password", "Password for $host")
             dialog.getPassword() ?: throw RuntimeException("no password")
         } else {
             // Check for stored password.
@@ -212,7 +215,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
             // this is a moot point. The askpass executable will unset this
             // variable when it exits.
             // <https://stackoverflow.com/q/8881291>
-            command.withEnvironment(mapOf(
+            command.withEnvironment(mapOf<String, Any?>(
                 "SSH_ASKPASS" to askPassExe.canonicalPath,
                 "SSH_PASSWORD" to password.joinToString(""),
             ))
@@ -244,7 +247,7 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
                 addParameter("-m")
             }
             addParameter(config.targetName)
-            addParameters(PosixCommandLine.split(config.targetArgs))
+            addParameters(CommandLine.split(config.targetArgs))
         }
         return command.commandLineString
     }

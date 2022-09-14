@@ -13,6 +13,7 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import dev.mdklatt.idea.common.map.findFirstKey
 import org.jdom.Element
 import java.lang.RuntimeException
 import java.util.UUID
@@ -225,7 +226,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             it.row {
                 comboBox(targetTypeOptions.values).bindItem(
                     getter = { targetTypeOptions[targetType] },
-                    setter = { targetType = targetTypeOptions.getKey(it) },
+                    setter = { targetType = targetTypeOptions.findFirstKey(it)!! }
                 )
                 textField().bindText(::targetName)
             }

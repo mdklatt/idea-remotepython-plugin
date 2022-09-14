@@ -14,6 +14,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
+import dev.mdklatt.idea.common.exec.CommandLine
+import dev.mdklatt.idea.common.exec.PosixCommandLine
+import dev.mdklatt.idea.common.map.findFirstKey
 
 
 /**
@@ -200,9 +203,9 @@ class DockerState internal constructor(private val config: DockerRunConfiguratio
                 addParameter("-m")
             }
             addParameter(config.targetName)
-            addParameters(PosixCommandLine.split(config.targetArgs))
+            addParameters(CommandLine.split(config.targetArgs))
         }
-        return PosixCommandLine.split(command.commandLineString).toTypedArray()
+        return CommandLine.split(command.commandLineString).toTypedArray()
     }
 }
 
@@ -271,8 +274,8 @@ class DockerEditor internal constructor() :
         parent.run {
             row {
                 comboBox(hostTypeOptions.values).bindItem(
-                    { hostTypeOptions[hostType] },
-                    { hostType = hostTypeOptions.getKey(it) },
+                    getter = { hostTypeOptions[hostType] },
+                    setter = { hostType = hostTypeOptions.findFirstKey(it)!! },
                 )
                 textField().bindText(::hostName)
             }

@@ -20,7 +20,13 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation("org.apache.commons:commons-text:1.8")
+    implementation("dev.mdklatt:idea-common") {
+        version {
+            // Pointing to a tag or commit is not supported yet.
+            // <https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/MutableVersionConstraint.html>
+            branch = "dev"  // TODO: switch to main after v0.1.0 release
+        }
+    }
     testImplementation(kotlin("test"))
     testImplementation(platform("org.junit:junit-bom:5.8.2"))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
