@@ -24,7 +24,7 @@ dependencies {
         version {
             // Pointing to a tag or commit is not supported yet.
             // <https://docs.gradle.org/current/javadoc/org/gradle/api/artifacts/MutableVersionConstraint.html>
-            branch = "dev"  // TODO: switch to main after v0.1.0 release
+            branch = "main"  // need v0.1.0 or equivalent
         }
     }
     testImplementation(kotlin("test"))
