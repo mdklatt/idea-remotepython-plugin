@@ -4,7 +4,7 @@
 package dev.mdklatt.idea.remotepython.run.test
 
 import kotlin.test.assertTrue
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import dev.mdklatt.idea.remotepython.run.RemotePythonConfigurationType
 import kotlin.test.assertNotNull
 
