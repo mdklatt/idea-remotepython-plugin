@@ -1,4 +1,4 @@
-name: Build
+name: Run Tests
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
         with:
           java-version: 11
           distribution: zulu  # https://www.azul.com/downloads/?package=jdk
-      - name: Set up Gradle
+      - name: Run all validation checks
         uses: gradle/gradle-build-action@v2
-      - name: Build project
-        run:  ./gradlew build && ./gradlew runPluginVerifier
+        with:
+          arguments: check
