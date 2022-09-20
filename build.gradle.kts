@@ -99,7 +99,6 @@ intellij {
     version.set(properties("platformVersion"))
     updateSinceUntilBuild.set(true)
     downloadSources.set(true)
-    plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
 }
 
 
