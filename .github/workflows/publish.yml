@@ -1,4 +1,4 @@
-name: Publish Binaries
+name: Publish
 on:
   release:
     types: [created]

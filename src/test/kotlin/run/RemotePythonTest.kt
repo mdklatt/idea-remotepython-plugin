@@ -1,18 +1,17 @@
 /**
  * Unit tests for the Python module.
  */
-package dev.mdklatt.idea.remotepython.run.test
+package dev.mdklatt.idea.remotepython.run
 
 import kotlin.test.assertTrue
 import kotlin.test.Test
-import dev.mdklatt.idea.remotepython.run.RemotePythonConfigurationType
 import kotlin.test.assertNotNull
 
 
 /**
  * Unit tests for the PythonConfigurationType class.
  */
-class RemotePythonConfigurationTypeTest {
+internal class RemotePythonConfigurationTypeTest {
 
     private var type = RemotePythonConfigurationType()
 

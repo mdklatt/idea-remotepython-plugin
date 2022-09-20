@@ -1,10 +1,9 @@
 /**
  * Unit tests for the Docker module.
  */
-package dev.mdklatt.idea.remotepython.run.test
+package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import dev.mdklatt.idea.remotepython.run.*
 import org.jdom.Element
 
 
