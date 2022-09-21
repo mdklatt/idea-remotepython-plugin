@@ -91,6 +91,13 @@ tasks {
         // https://plugins.jetbrains.com/docs/intellij/deployment.html#specifying-a-release-channel
         channels.set(listOf(properties("pluginVersion").split('-').getOrElse(1) { "default" }.split('.').first()))
     }
+
+    check {
+        // Add plugin validation tasks to default checks.
+        dependsOn(verifyPlugin)
+        dependsOn(verifyPluginConfiguration)
+        dependsOn(runPluginVerifier)
+    }
 }
 
 
