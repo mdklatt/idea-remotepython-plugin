@@ -86,6 +86,42 @@ class SecureShellOptions : RemotePythonOptions() {
 class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
     RemotePythonRunConfiguration<SecureShellOptions>(project, factory, name) {
 
+    internal var hostName: String
+        get() = options.hostName ?: ""
+        set(value) {
+            options.hostName = value
+        }
+    internal var hostUser: String
+        get() = options.hostUser ?: ""
+        set(value) {
+            options.hostUser = value
+        }
+
+    internal val hostPass: StoredPassword
+        get() = StoredPassword(uid)  // need password for current UID
+
+    internal var hostPassPrompt: Boolean
+        get() = options.hostPassPrompt
+        set(value) {
+            options.hostPassPrompt = value
+        }
+
+    internal var sshExe: String
+        get() = options.sshExe ?: "ssh"
+        set(value) {
+            options.sshExe = value.ifBlank { "ssh" }
+        }
+    internal var sshOpts: String
+        get() = options.sshOpts ?: ""
+        set(value) {
+            options.sshOpts = value
+        }
+    internal var localWorkDir: String
+        get() = options.localWorkDir ?: ""
+        set(value) {
+            options.localWorkDir = value
+        }
+
     /**
      * Prepares for executing a specific instance of the run configuration.
      *
@@ -105,49 +141,15 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
      */
     override fun getConfigurationEditor() = SecureShellEditor()
 
-    var hostName: String
-        get() = options.hostName ?: ""
-        set(value) {
-            options.hostName = value
-        }
-    var hostUser: String
-        get() = options.hostUser ?: ""
-        set(value) {
-            options.hostUser = value
-        }
-
-    internal val hostPass: StoredPassword
-        get() = StoredPassword(uid)  // need password for current UID
-
-    var hostPassPrompt: Boolean
-        get() = options.hostPassPrompt
-        set(value) {
-            options.hostPassPrompt = value
-        }
-
-    var sshExe: String
-        get() = options.sshExe ?: "ssh"
-        set(value) {
-            options.sshExe = value.ifBlank { "ssh" }
-        }
-    var sshOpts: String
-        get() = options.sshOpts ?: ""
-        set(value) {
-            options.sshOpts = value
-        }
-    var localWorkDir: String
-        get() = options.localWorkDir ?: ""
-        set(value) {
-            options.localWorkDir = value
-        }
-
+    /**
+     *
+     */
     override fun writeExternal(element: Element) {
         if (hostPassPrompt) {
             // Do not use saved password.
             hostPass.value = null
         }
         super.writeExternal(element)
-
     }
 }
 
@@ -342,8 +344,7 @@ class SecureShellEditor internal constructor() :
             }
             row("Local working directory") {
                 // TODO: Is this necessary for SSH?
-                textFieldWithBrowseButton(
-                    browseDialogTitle = "Local Working Directory",
+                textFieldWithBrowseButton("Local Working Directory",
                     fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
                 ).bindText(::localWorkDir)
             }

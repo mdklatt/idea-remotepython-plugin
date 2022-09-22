@@ -2,6 +2,7 @@
 // <https://maven.apache.org/pom.html#maven-coordinates>
 rootProject.name = "idea-remotepython-plugin"
 
+
 // Add source dependencies.
 // https://docs.gradle.org/current/javadoc/org/gradle/vcs/SourceControl.html
 sourceControl {

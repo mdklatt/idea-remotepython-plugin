@@ -105,32 +105,32 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      */
     override fun getConfigurationEditor() = DockerEditor()
 
-    var hostType: DockerHostType
+    internal var hostType: DockerHostType
         get() = DockerHostType.valueOf(options.hostType ?: "IMAGE")
         set(value) {
             options.hostType = value.name
         }
-    var hostName: String
+    internal var hostName: String
         get() = options.hostName ?: ""
         set(value) {
             options.hostName = value
         }
-    var dockerExe: String
+    internal var dockerExe: String
         get() = options.dockerExe ?: "docker"
         set(value) {
             options.dockerExe = value.ifBlank { "docker" }
         }
-    var dockerOpts: String
+    internal var dockerOpts: String
         get() = options.dockerOpts ?: ""
         set(value) {
             options.dockerOpts = value
         }
-    var dockerCompose: String
+    internal var dockerCompose: String
         get() = options.dockerCompose ?: ""
         set(value) {
             options.dockerCompose = value
         }
-    var localWorkDir: String
+    internal var localWorkDir: String
         get() = options.localWorkDir ?: ""
         set(value) {
             options.localWorkDir = value

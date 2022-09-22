@@ -88,7 +88,7 @@ abstract class RemotePythonOptions : RunConfigurationOptions() {
     internal var targetType by string()
     internal var targetName by string()
     internal var targetArgs by string()
-    internal var pythonExe by string()
+    internal var pythonExe by string("python3")
     internal var pythonOpts by string()
     internal var pythonWorkDir by string()
 }
@@ -110,6 +110,9 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
 
     protected val logger = Logger.getInstance(this::class.java)
 
+    /**
+     * Get the persistent options for this instance.
+     */
     final override fun getOptions(): Options {
         // Kotlin considers this an unsafe cast because generics do not have
         // runtime type information unless they are reified, which is not
@@ -118,12 +121,19 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         return super.getOptions() as Options
     }
 
+    /**
+     * Read settings from XML.
+     */
     override fun readExternal(element: Element) {
         super.readExternal(element)
         if (options.uid == null) {
             options.uid = UUID.randomUUID().toString()
         }
     }
+
+    /**
+     * Write settings to XML.
+     */
     override fun writeExternal(element: Element) {
         val default = element.getAttributeValue("default")?.toBoolean() ?: false
         if (default) {
@@ -132,9 +142,10 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         }
         super.writeExternal(element)
     }
+
     // TODO: Why can't options.<property> be used as a delegate?
 
-    var uid: String
+    internal var uid: String
         get() {
             if (options.uid == null) {
                 options.uid = UUID.randomUUID().toString()
@@ -145,32 +156,32 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
             options.uid = value
         }
 
-    var targetType: TargetType
+    internal var targetType: TargetType
         get() = TargetType.valueOf(options.targetType ?: "MODULE")
         set(value) {
             options.targetType = value.name
         }
-    var targetName: String
+    internal var targetName: String
         get() = options.targetName ?: ""
         set(value) {
             options.targetName = value
         }
-    var targetArgs: String
+    internal var targetArgs: String
         get() = options.targetArgs ?: ""
         set(value) {
             options.targetArgs = value
         }
-    var pythonExe: String
-        get() = options.pythonExe ?: "python3"
+    internal var pythonExe: String
+        get() = options.pythonExe ?: ""
         set(value) {
             options.pythonExe = value.ifBlank { "python3" }
         }
-    var pythonOpts: String
+    internal var pythonOpts: String
         get() = options.pythonOpts ?: ""
         set(value) {
             options.pythonOpts = value
         }
-    var pythonWorkDir: String
+    internal var pythonWorkDir: String
         get() = options.pythonWorkDir ?: ""
         set(value) {
             options.pythonWorkDir = value
