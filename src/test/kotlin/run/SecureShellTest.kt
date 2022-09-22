@@ -31,6 +31,20 @@ internal class SecureShellConfigurationFactoryTest : BasePlatformTestCase() {
     }
 
     /**
+     * Test the `id` property.
+     */
+    fun testId() {
+        assertTrue(factory.id.isNotBlank())
+    }
+
+    /**
+     * Test the `name` property.
+     */
+    fun testName() {
+        assertTrue(factory.name.isNotBlank())
+    }
+
+    /**
      * Test the testCreateTemplateConfiguration() method.
      */
     fun testCreateTemplateConfiguration() {
@@ -65,6 +79,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
      */
     override fun tearDown() {
         config.hostPass.value = null  // remove from credential store
+        super.tearDown()
     }
 
     /**
