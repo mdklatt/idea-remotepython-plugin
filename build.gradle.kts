@@ -14,6 +14,25 @@ plugins {
 }
 
 
+intellij {
+    // <https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html>
+    version.set(properties("platformVersion"))
+    updateSinceUntilBuild.set(true)
+    downloadSources.set(true)
+}
+
+
+changelog {
+    // <https://github.com/JetBrains/gradle-changelog-plugin>
+    path.set("${project.projectDir}/CHANGELOG.md")
+    header.set(provider { "[${version.get()}] - ${date()}" })
+    itemPrefix.set("-")
+    keepUnreleasedSection.set(false)
+    unreleasedTerm.set("[Unreleased]")
+    groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
+}
+
+
 repositories {
     mavenCentral()
 }
@@ -31,7 +50,7 @@ dependencies {
 
     // JUnit3 is required for running IDEA platform tests.
     testImplementation(platform("org.junit:junit-bom:5.9.0"))
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine")  // required for IDE platform tests
 }
 
 
@@ -98,22 +117,4 @@ tasks {
         dependsOn(verifyPluginConfiguration)
         dependsOn(runPluginVerifier)
     }
-}
-
-
-intellij {
-    // <https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html>
-    version.set(properties("platformVersion"))
-    updateSinceUntilBuild.set(true)
-    downloadSources.set(true)
-}
-
-
-changelog {
-    // <https://github.com/JetBrains/gradle-changelog-plugin>
-    path.set("${project.projectDir}/CHANGELOG.md")
-    header.set(provider { "[${version.get()}] - ${date()}" })
-    itemPrefix.set("-")
-    unreleasedTerm.set("[Unreleased]")
-    groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
 }
