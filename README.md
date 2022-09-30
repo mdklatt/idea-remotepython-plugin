@@ -1,33 +1,54 @@
-# Remote Python Plugin
+# IDEA Remote Python Plugin
 
 [![IDEA version][1]][7]
 [![Latest release][2]][3]
 [![Test status][4]][5]
 
+## Description
 
+<!-- This content is used by the Gradle IntelliJ Plugin. --> 
 <!-- Plugin description -->
 
-The **Remote Python** plugin provides [Run Configurations][6] for running remote Python commands in 
-a [JetBrains][7] IDE that does not have built-in remote Python support, *e.g.* [CLion][8]. SSH
-hosts, [Docker][9] containers, and [Vagrant][10] machines can be used as remote environments.
+[Run Configurations][6] for running remote Python commands in a [JetBrains][7]
+IDE that does not have built-in remote Python support. This is not a substitute 
+for the full remote interpreter support in [PyCharm Professional][11] and does
+not support remote development features like code completion or debugging.
 
-This is not a substitute for the remote interpreter support in [PyCharm Professional][11], and does 
-not support remote development features.
+Each remote interpreter type has its own run configuration:
+
+### Secure Shell (SSH)
+
+Use an [OpenSSH][8]-compatible client on the local machine to execute on a 
+remote host via SSH. The client configuration is used for connections (host
+addresses, proxy settings, SSH keys, *etc*.)
+
+### Docker
+
+Use the [Docker][9] runtime on the local machine to execute inside a running
+container, or a temporary container created from an image or [Compose][13]
+service.
+
+### Vagrant
+
+Use the [Vagrant][10] executable on the local machine to execute inside a 
+virtual machine.
+
 
 
 [6]: https://www.jetbrains.com/help/idea/run-debug-configuration.html
 [7]: https://www.jetbrains.com
-[8]: https://www.jetbrains.com/clion
+[8]: https://www.openssh.com
 [9]: https://docker.com
 [10]: https://vagrantup.com
 [11]: https://www.jetbrains.com/pycharm
+[13]: https://docs.docker.com/compose
 
 <!-- Plugin description end -->
 
 ## Installation
 
-[GitHub releases][3] include a binary distribution named`idea-remote-plugin-<version>.zip` that can 
-be used to [install the plugin from disk][12].
+[Releases][3] include a binary distribution named `idea-remotepython-plugin-<version>.zip` 
+that can be used to [install the plugin from disk][12].
 
 
 [1]: https://img.shields.io/static/v1?label=IDEA&message=2022.1%2B&color=informational
