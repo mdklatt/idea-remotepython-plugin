@@ -3,7 +3,12 @@
  */
 package dev.mdklatt.idea.remotepython.run
 
+import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.*
+import com.intellij.execution.process.KillableColoredProcessHandler
+import com.intellij.execution.process.ProcessHandler
+import com.intellij.execution.process.ProcessTerminatedListener
+import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.options.SettingsEditor
@@ -13,6 +18,7 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import dev.mdklatt.idea.common.exec.PosixCommandLine
 import dev.mdklatt.idea.common.map.findFirstKey
 import org.jdom.Element
 import java.lang.RuntimeException
@@ -333,4 +339,42 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
      * @param config: run configuration
      */
     protected abstract fun applyExecutorOptions(config: Config)
+}
+
+
+/**
+ * Base class for run configuration command line processes.
+ *
+ * @param environment: execution environment
+ * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
+ */
+abstract class RemotePythonState internal constructor(environment: ExecutionEnvironment) :
+    CommandLineState(environment) {
+
+    /**
+     * Start the process.
+     *
+     * @return the handler for the running process
+     * @throws ExecutionException if the execution failed.
+     * @see GeneralCommandLine
+     *
+     * @see com.intellij.execution.process.OSProcessHandler
+     */
+    override fun startProcess(): ProcessHandler {
+        val command = getCommand().also {
+            if (!it.environment.contains("TERM")) {
+                it.environment["TERM"] = "xterm-256color"
+            }
+        }
+        return KillableColoredProcessHandler(command).also {
+            ProcessTerminatedListener.attach(it, environment.project)
+        }
+    }
+
+    /**
+     * Get command to execute.
+     *
+     * @return command
+     */
+    internal abstract fun getCommand(): PosixCommandLine
 }

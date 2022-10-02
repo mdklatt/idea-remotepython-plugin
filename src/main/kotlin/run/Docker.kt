@@ -5,9 +5,6 @@ package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
-import com.intellij.execution.process.KillableColoredProcessHandler
-import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -93,7 +90,7 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) = DockerState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = DockerState(environment)
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -141,53 +138,47 @@ class DockerRunConfiguration(project: Project, factory: DockerConfigurationFacto
 /**
  * Command line process for executing the run configuration.
  *
- * @param config: run configuration
  * @param environment: execution environment
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class DockerState internal constructor(private val config: DockerRunConfiguration, environment: ExecutionEnvironment) :
-        CommandLineState(environment) {
+class DockerState internal constructor(environment: ExecutionEnvironment) :
+        RemotePythonState(environment) {
+
+    private val config = environment.runnerAndConfigurationSettings?.configuration as DockerRunConfiguration
 
     /**
-     * Starts the process.
+     * Get command to execute.
      *
-     * @return the handler for the running process
-     * @see GeneralCommandLine
-     * @see com.intellij.execution.process.OSProcessHandler
+     * @return Docker command
      */
-    override fun startProcess(): ProcessHandler {
+    override fun getCommand(): PosixCommandLine {
         val runOptions = mapOf(
             "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
             "rm" to true,
             "entrypoint" to ""
         )
-        val command = PosixCommandLine(config.dockerExe)
-        when (config.hostType) {
-            DockerHostType.CONTAINER -> {
-                command.addParameter("exec")
+        return PosixCommandLine(config.dockerExe).also {
+            when (config.hostType) {
+                DockerHostType.CONTAINER -> {
+                    it.addParameter("exec")
+                }
+                DockerHostType.IMAGE -> {
+                    it.addParameter("run")
+                    it.addOptions(runOptions)
+                }
+                DockerHostType.SERVICE -> {
+                    it.addParameter("compose")
+                    it.addOptions(mapOf(
+                        "file" to config.dockerCompose.ifBlank { null }  // null to omit
+                    ))
+                    it.addParameter("run")
+                    it.addOptions(runOptions)
+                }
             }
-            DockerHostType.IMAGE -> {
-                command.addParameter("run")
-                command.addOptions(runOptions)
+            it.addParameters(config.hostName, *python())
+            if (config.localWorkDir.isNotBlank()) {
+                it.setWorkDirectory(config.localWorkDir)
             }
-            DockerHostType.SERVICE -> {
-                command.addParameter("compose")
-                command.addOptions(mapOf(
-                    "file" to config.dockerCompose.ifBlank { null }  // null to omit
-                ))
-                command.addParameter("run")
-                command.addOptions(runOptions)
-            }
-        }
-        command.addParameters(config.hostName, *python())
-        if (config.localWorkDir.isNotBlank()) {
-            command.setWorkDirectory(config.localWorkDir)
-        }
-        if (!command.environment.contains("TERM")) {
-            command.environment["TERM"] = "xterm-256color"
-        }
-        return KillableColoredProcessHandler(command).also {
-            ProcessTerminatedListener.attach(it, environment.project)
         }
     }
 
