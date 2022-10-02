@@ -5,9 +5,6 @@ package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
-import com.intellij.execution.process.KillableColoredProcessHandler
-import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -83,7 +80,7 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) = VagrantState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = VagrantState(environment)
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -121,34 +118,29 @@ class VagrantRunConfiguration(project: Project, factory: ConfigurationFactory, n
 /**
  * Command line process for executing the run configuration.
  *
- * @param config: run configuration
  * @param environment: execution environment
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class VagrantState internal constructor(private val config: VagrantRunConfiguration, environment: ExecutionEnvironment) :
-    CommandLineState(environment) {
+class VagrantState internal constructor(environment: ExecutionEnvironment) :
+    RemotePythonState(environment) {
+
+    private val config = environment.runnerAndConfigurationSettings?.configuration as VagrantRunConfiguration
+
     /**
-     * Starts the process.
+     * Get command to execute.
      *
-     * @return the handler for the running process
-     * @see GeneralCommandLine
-     * @see com.intellij.execution.process.OSProcessHandler
+     * @return Vagrant command
      */
-    override fun startProcess(): ProcessHandler {
-        val command = PosixCommandLine(config.vagrantExe, listOf("ssh"))
+    override fun getCommand(): PosixCommandLine {
         val options = mutableMapOf<String, Any?>(
             "command" to python()
         )
-        command.addOptions(options)
-        command.addParameter(config.hostName)
-        if (config.localWorkDir.isNotBlank()) {
-            command.setWorkDirectory(config.localWorkDir)
-        }
-        if (!command.environment.contains("TERM")) {
-            command.environment["TERM"] = "xterm-256color"
-        }
-        return KillableColoredProcessHandler(command).also {
-            ProcessTerminatedListener.attach(it, environment.project)
+        return PosixCommandLine(config.vagrantExe, sequenceOf("ssh")).also {
+            it.addOptions(options)
+            it.addParameter(config.hostName)
+            if (config.localWorkDir.isNotBlank()) {
+                it.setWorkDirectory(config.localWorkDir)
+            }
         }
     }
 

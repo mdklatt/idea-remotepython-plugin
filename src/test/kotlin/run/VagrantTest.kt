@@ -3,6 +3,9 @@
  */
 package dev.mdklatt.idea.remotepython.run
 
+import com.intellij.execution.RunManager
+import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
 
@@ -151,5 +154,40 @@ internal class VagrantEditorTest : BasePlatformTestCase() {
     fun testConstructor() {
         // Just a smoke test.
         assertNotNull(editor.component)
+    }
+}
+
+
+
+/**
+ * Unit tests for the VagrantState class.
+ */
+internal class VagrantStateTest : BasePlatformTestCase() {
+
+    private lateinit var state: VagrantState
+
+    /**
+     * Per-test initialization.
+     */
+    override fun setUp() {
+        super.setUp()
+        val factory = VagrantConfigurationFactory(RemotePythonConfigurationType())
+        val runConfig = RunManager.getInstance(project).createConfiguration("Vagrant Test", factory)
+        (runConfig.configuration as VagrantRunConfiguration).also {
+            it.hostName = "box"
+            it.targetType = TargetType.MODULE
+            it.targetName = "platform"
+        }
+        val executor = DefaultRunExecutor.getRunExecutorInstance()
+        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
+        state = VagrantState(environment)
+    }
+
+    /**
+     * Test the getCommand() method.
+     */
+    fun testGetCommand() {
+        val command = "vagrant ssh --command \"python3 -m platform\" box"
+        assertEquals(command, state.getCommand().commandLineString)
     }
 }
