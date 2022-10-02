@@ -3,6 +3,9 @@
  */
 package dev.mdklatt.idea.remotepython.run
 
+import com.intellij.execution.RunManager
+import com.intellij.execution.executors.DefaultRunExecutor
+import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlin.test.assertContentEquals
 import org.jdom.Element
@@ -187,5 +190,40 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
     fun testConstructor() {
         // Just a smoke test.
         assertNotNull(editor.component)
+    }
+}
+
+
+/**
+ * Unit tests for the SecureShellState class.
+ */
+internal class SecureShellStateTest : BasePlatformTestCase() {
+
+    private lateinit var state: SecureShellState
+
+    /**
+     * Per-test initialization.
+     */
+    override fun setUp() {
+        super.setUp()
+        val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
+        val runConfig = RunManager.getInstance(project).createConfiguration("SecureShell Test", factory)
+        (runConfig.configuration as SecureShellRunConfiguration).also {
+            it.hostName = "example.com"
+            it.hostUser = "jdoe"
+            it.targetType = TargetType.MODULE
+            it.targetName = "platform"
+        }
+        val executor = DefaultRunExecutor.getRunExecutorInstance()
+        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
+        state = SecureShellState(environment)
+    }
+
+    /**
+     * Test the getCommand() method.
+     */
+    fun testGetCommand() {
+        val command = "ssh jdoe@example.com \"python3 -m platform\""
+        assertEquals(command, state.getCommand().commandLineString)
     }
 }

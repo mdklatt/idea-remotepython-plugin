@@ -5,9 +5,6 @@ package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.*
-import com.intellij.execution.process.KillableColoredProcessHandler
-import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
@@ -129,7 +126,7 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
      * @param environment the environment object containing additional settings for executing the configuration.
      * @return the RunProfileState describing the process which is about to be started, or null if it's impossible to start the process.
      */
-    override fun getState(executor: Executor, environment: ExecutionEnvironment) = SecureShellState(this, environment)
+    override fun getState(executor: Executor, environment: ExecutionEnvironment) = SecureShellState(environment)
 
     /**
      * Returns the UI control for editing the run configuration settings. If additional control over validation is required, the object
@@ -142,7 +139,7 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
     override fun getConfigurationEditor() = SecureShellEditor()
 
     /**
-     *
+     * Write settings to XML.
      */
     override fun writeExternal(element: Element) {
         if (hostPassPrompt) {
@@ -157,21 +154,20 @@ class SecureShellRunConfiguration(project: Project, factory: ConfigurationFactor
 /**
  * Command line process for executing the run configuration.
  *
- * @param config: run configuration
  * @param environment: execution environment
  * @see <a href="https://plugins.jetbrains.com/docs/intellij/run-configurations.html#implement-a-run-configuration">Run Configurations Tutorial</a>
  */
-class SecureShellState internal constructor(private val config: SecureShellRunConfiguration, environment: ExecutionEnvironment) :
-    CommandLineState(environment) {
+class SecureShellState internal constructor(environment: ExecutionEnvironment) :
+    RemotePythonState(environment) {
+
+    private val config = environment.runnerAndConfigurationSettings?.configuration as SecureShellRunConfiguration
 
     /**
-     * Starts the process.
+     * Get command to execute.
      *
-     * @return the handler for the running process
-     * @see GeneralCommandLine
-     * @see com.intellij.execution.process.OSProcessHandler
+     * @return SSH command
      */
-    override fun startProcess(): ProcessHandler {
+    override fun getCommand(): PosixCommandLine {
         // The system SSH client is used here instead of a JVM implementation
         // (e.g. https://github.com/hierynomus/sshj) to take advantage of the
         // user's existing SSH setup (SSH keys, host keys, agent forwarding,
@@ -179,54 +175,51 @@ class SecureShellState internal constructor(private val config: SecureShellRunCo
         // would have to be implemented here. The drawback of this is that it
         // requires an SSH client to be installed on the local machine,
         // specifically one compatible with OpenSSH, whose API is used here.
-        val command = PosixCommandLine(config.sshExe)
-        if (config.sshOpts.isNotBlank()) {
-            command.addParameters(CommandLine.split(config.sshOpts))
-        }
-        var host = config.hostName
-        if (config.hostUser.isNotBlank()) {
-            host = config.hostUser + "@" + host
-        }
-        command.addParameters(host, python())
-        if (config.localWorkDir.isNotBlank()) {
-            command.setWorkDirectory(config.localWorkDir)
-        }
-        val password = if (config.hostPassPrompt) {
-            // Prompt user for password.
-            val dialog = PasswordDialog("SSH Password", "Password for $host")
-            dialog.getPassword() ?: throw RuntimeException("no password")
-        } else {
-            // Check for stored password.
-            config.hostPass.value ?: charArrayOf()
-        }
-        if (password.isNotEmpty()) {
-            // Submit the password to `ssh` non-interactively. If OpenSSH is
-            // running in a GUI environment, as in this case, it disables its
-            // own password prompt and instead executes $SSH_ASKPASS. This
-            // must point to an executable that prints the password to STDOUT.
-            // $DISPLAY must also be set for this to work, which is inherited
-            // from the parent IDEA environment here.
-            // <https://linux.die.net/man/1/ssh>
-            //
-            // $SSH_PASSWORD is an implementation detail of this function used
-            // to pass a value to the askpass executable. While the environment
-            // variable itself is (mostly) secure because it's local to the
-            // subprocess environment, the conversion of `password` to a string
-            // here places it in JVM memory until it is garbage collected. This
-            // is less secure, but if an attacker has access to system memory,
-            // this is a moot point. The askpass executable will unset this
-            // variable when it exits.
-            // <https://stackoverflow.com/q/8881291>
-            command.withEnvironment(mapOf<String, Any?>(
-                "SSH_ASKPASS" to askPassExe.canonicalPath,
-                "SSH_PASSWORD" to password.joinToString(""),
-            ))
-        }
-        if (!command.environment.contains("TERM")) {
-            command.environment["TERM"] = "xterm-256color"
-        }
-        return KillableColoredProcessHandler(command).also {
-            ProcessTerminatedListener.attach(it, environment.project)
+        return PosixCommandLine(config.sshExe).also {
+            if (config.sshOpts.isNotBlank()) {
+                it.addParameters(CommandLine.split(config.sshOpts))
+            }
+            var host = config.hostName
+            if (config.hostUser.isNotBlank()) {
+                host = config.hostUser + "@" + host
+            }
+            it.addParameters(host, python())
+            if (config.localWorkDir.isNotBlank()) {
+                it.setWorkDirectory(config.localWorkDir)
+            }
+            val password = if (config.hostPassPrompt) {
+                // Prompt user for password.
+                val dialog = PasswordDialog("SSH Password", "Password for $host")
+                dialog.getPassword() ?: throw RuntimeException("no password")
+            } else {
+                // Check for stored password.
+                config.hostPass.value ?: charArrayOf()
+            }
+            if (password.isNotEmpty()) {
+                // Submit the password to `ssh` non-interactively. If OpenSSH is
+                // running in a GUI environment, as in this case, it disables its
+                // own password prompt and instead executes $SSH_ASKPASS. This
+                // must point to an executable that prints the password to STDOUT.
+                // $DISPLAY must also be set for this to work, which is inherited
+                // from the parent IDEA environment here.
+                // <https://linux.die.net/man/1/ssh>
+                //
+                // $SSH_PASSWORD is an implementation detail of this function used
+                // to pass a value to the askpass executable. While the environment
+                // variable itself is (mostly) secure because it's local to the
+                // subprocess environment, the conversion of `password` to a string
+                // here places it in JVM memory until it is garbage collected. This
+                // is less secure, but if an attacker has access to system memory,
+                // this is a moot point. The askpass executable will unset this
+                // variable when it exits.
+                // <https://stackoverflow.com/q/8881291>
+                it.withEnvironment(
+                    mapOf<String, Any?>(
+                        "SSH_ASKPASS" to askPassExe.canonicalPath,
+                        "SSH_PASSWORD" to password.joinToString(""),
+                    )
+                )
+            }
         }
     }
 
