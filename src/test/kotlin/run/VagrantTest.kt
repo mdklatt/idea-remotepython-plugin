@@ -86,6 +86,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.targetName)
             assertEquals("", it.targetArgs)
             assertEquals("python3", it.pythonExe)
+            assertEquals("", it.pythonVenv)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
             assertEquals("", it.pythonWorkDir)
@@ -105,6 +106,7 @@ internal class VagrantRunConfigurationTest : BasePlatformTestCase() {
             it.targetName = "app.py"
             it.targetArgs = "-h"
             it.pythonExe = "/bin/python"
+            it.pythonVenv = "venv"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
             it.pythonWorkDir = "/tmp"
@@ -177,6 +179,8 @@ internal class VagrantStateTest : BasePlatformTestCase() {
             it.hostName = "box"
             it.targetType = TargetType.MODULE
             it.targetName = "platform"
+            it.pythonOpts = "-a -b"
+            it.pythonVenv = "venv"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
@@ -187,7 +191,7 @@ internal class VagrantStateTest : BasePlatformTestCase() {
      * Test the getCommand() method.
      */
     fun testGetCommand() {
-        val command = "vagrant ssh --command \"python3 -m platform\" box"
+        val command = "vagrant ssh --command \". venv/bin/activate && python3 -a -b -m platform\" box"
         assertEquals(command, state.getCommand().commandLineString)
     }
 }
