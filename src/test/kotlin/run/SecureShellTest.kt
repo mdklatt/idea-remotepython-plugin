@@ -95,6 +95,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             assertEquals("", it.targetName)
             assertEquals("", it.targetArgs)
             assertEquals("python3", it.pythonExe)
+            assertEquals("", it.pythonVenv)
             assertEquals("", it.pythonOpts)
             assertEquals("", it.localWorkDir)
             assertEquals("", it.pythonWorkDir)
@@ -117,6 +118,7 @@ internal class SecureShellRunConfigurationTest : BasePlatformTestCase() {
             it.targetName = "app.py"
             it.targetArgs = "-h"
             it.pythonExe = "/bin/python"
+            it.pythonVenv = "venv"
             it.pythonOpts = "-v"
             it.localWorkDir = "./"
             it.pythonWorkDir = "/tmp"
@@ -213,6 +215,8 @@ internal class SecureShellStateTest : BasePlatformTestCase() {
             it.hostUser = "jdoe"
             it.targetType = TargetType.MODULE
             it.targetName = "platform"
+            it.pythonOpts = "-a -b"
+            it.pythonVenv = "venv"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
@@ -223,7 +227,7 @@ internal class SecureShellStateTest : BasePlatformTestCase() {
      * Test the getCommand() method.
      */
     fun testGetCommand() {
-        val command = "ssh jdoe@example.com \"python3 -m platform\""
+        val command = "ssh jdoe@example.com \". venv/bin/activate && python3 -a -b -m platform\""
         assertEquals(command, state.getCommand().commandLineString)
     }
 }

@@ -11,6 +11,7 @@ import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
@@ -18,6 +19,7 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import dev.mdklatt.idea.common.exec.CommandLine
 import dev.mdklatt.idea.common.exec.PosixCommandLine
 import dev.mdklatt.idea.common.map.findFirstKey
 import org.jdom.Element
@@ -95,6 +97,7 @@ abstract class RemotePythonOptions : RunConfigurationOptions() {
     internal var targetName by string()
     internal var targetArgs by string()
     internal var pythonExe by string("python3")
+    internal var pythonVenv by string()
     internal var pythonOpts by string()
     internal var pythonWorkDir by string()
 }
@@ -182,6 +185,11 @@ abstract class RemotePythonRunConfiguration<Options : RemotePythonOptions>(
         set(value) {
             options.pythonExe = value.ifBlank { "python3" }
         }
+    internal var pythonVenv: String
+        get() = options.pythonVenv ?: ""
+        set(value) {
+            options.pythonVenv = value
+        }
     internal var pythonOpts: String
         get() = options.pythonOpts ?: ""
         set(value) {
@@ -214,6 +222,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
     private var targetName = ""
     private var targetArgs = ""
     private var pythonExe = ""
+    private var pythonVenv = ""
     private var pythonOpts = ""
     private var pythonWorkDir = ""
 
@@ -252,6 +261,11 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             }
             it.row("Python interpreter:") {
                 textField().bindText(::pythonExe)
+            }
+            it.row("Python virtualenv:") {
+                textFieldWithBrowseButton("Python Virtual Environment",
+                    fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
+                ).bindText(::pythonVenv)
             }
             it.row("Python options:") {
                 textField().bindText(::pythonOpts)
@@ -293,6 +307,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             targetName = it.targetName
             targetArgs = it.targetArgs
             pythonExe = it.pythonExe
+            pythonVenv = it.pythonVenv
             pythonOpts = it.pythonOpts
             pythonWorkDir = it.pythonWorkDir
         }
@@ -328,6 +343,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
             it.targetName = targetName
             it.targetArgs = targetArgs
             it.pythonExe = pythonExe
+            it.pythonVenv = pythonVenv
             it.pythonOpts = pythonOpts
             it.pythonWorkDir = pythonWorkDir
         }
@@ -377,4 +393,7 @@ abstract class RemotePythonState internal constructor(environment: ExecutionEnvi
      * @return command
      */
     internal abstract fun getCommand(): PosixCommandLine
-}
+
+    protected fun joinCommands(commands: Sequence<PosixCommandLine>) =
+        commands.map { it.commandLineString }.joinToString(" && ")
+    }
