@@ -175,7 +175,7 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
                     it.addOptions(runOptions)
                 }
             }
-            it.addParameters(config.hostName, *python())
+            it.addParameters(config.hostName, *pythonCommandString())
             if (config.localWorkDir.isNotBlank()) {
                 it.setWorkDirectory(config.localWorkDir)
             }
@@ -187,9 +187,13 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
      *
      * @return: Python command string
      */
-    private fun python(): Array<String> {
-        val command = PosixCommandLine().apply {
-            withExePath(config.pythonExe)
+    private fun pythonCommandString(): Array<String> {
+        val options = if (config.pythonOpts.isBlank()) {
+            emptyList()
+        } else {
+            config.pythonOpts.split("\\s+".toRegex())
+        }
+        val command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
             if (config.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }

@@ -183,6 +183,7 @@ internal class DockerStateTest : BasePlatformTestCase() {
             it.hostName = "ubuntu:latest"
             it.targetType = TargetType.MODULE
             it.targetName = "platform"
+            it.pythonOpts = "-a -b"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
@@ -193,7 +194,7 @@ internal class DockerStateTest : BasePlatformTestCase() {
      * Test the getCommand() method.
      */
     fun testGetCommand() {
-        val command = "docker run --rm --entrypoint \"\" ubuntu:latest python3 -m platform"
+        val command = "docker run --rm --entrypoint \"\" ubuntu:latest python3 -a -b -m platform"
         assertEquals(command, state.getCommand().commandLineString)
     }
 }
