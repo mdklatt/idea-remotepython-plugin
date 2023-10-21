@@ -169,32 +169,64 @@ internal class DockerEditorTest : BasePlatformTestCase() {
  */
 internal class DockerStateTest : BasePlatformTestCase() {
 
-    private lateinit var state: DockerState
+    private lateinit var dockerRunArgs: String
+    private lateinit var pythonCommand: String
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
-        val runConfig = RunManager.getInstance(project).createConfiguration("Docker Test", factory)
-        (runConfig.configuration as DockerRunConfiguration).also {
-            it.hostType = DockerHostType.IMAGE
-            it.hostName = "ubuntu:latest"
-            it.targetType = TargetType.MODULE
-            it.targetName = "platform"
-            it.pythonOpts = "-a -b"
-        }
-        val executor = DefaultRunExecutor.getRunExecutorInstance()
-        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
-        state = DockerState(environment)
+        dockerRunArgs = "run --rm --entrypoint \"\" --env VIRTUAL_ENV=venv --env PATH=venv/bin:\$PATH --env PYTHONHOME="
+        pythonCommand = "python3 -a -b -m platform"
     }
 
     /**
-     * Test the getCommand() method.
+     * Create a DockerState for testing.
+     *
+     * @param hostType: Docker host type
+     * @return state object
      */
-    fun testGetCommand() {
-        val command = "docker run --rm --entrypoint \"\" ubuntu:latest python3 -a -b -m platform"
-        assertEquals(command, state.getCommand().commandLineString)
+    private fun state(hostType: DockerHostType): DockerState {
+        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        val runConfig = RunManager.getInstance(project).createConfiguration("Docker Test", factory)
+        (runConfig.configuration as DockerRunConfiguration).also {
+            it.hostType = hostType
+            it.hostName = "ubuntu"
+            it.targetType = TargetType.MODULE
+            it.targetName = "platform"
+            it.pythonOpts = "-a -b"
+            it.pythonVenv = "venv"
+        }
+        val executor = DefaultRunExecutor.getRunExecutorInstance()
+        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
+        return DockerState(environment)
+    }
+
+    /**
+     * Test the getCommand() method for a Docker image.
+     */
+    fun testGetCommandImage() {
+        val command = state(DockerHostType.IMAGE).getCommand()
+        val str = "docker ${dockerRunArgs} ubuntu ${pythonCommand}"
+        assertEquals(str, command.commandLineString)
+    }
+
+    /**
+     * Test the getCommand() method for a Docker Compose service.
+     */
+    fun testGetCommandCompose() {
+        val command = state(DockerHostType.SERVICE).getCommand()
+        val str = "docker compose ${dockerRunArgs} ubuntu ${pythonCommand}"
+        assertEquals(str, command.commandLineString)
+    }
+
+    /**
+     * Test the getCommand() method for a Docker container.
+     */
+    fun testGetCommandContainer() {
+        val command = state(DockerHostType.CONTAINER).getCommand()
+        val str = "docker exec ubuntu sh -c \". venv/bin/activate && ${pythonCommand}\""
+        assertEquals(str, command.commandLineString)
     }
 }

@@ -155,29 +155,44 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
         val runOptions = mapOf(
             "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
             "rm" to true,
-            "entrypoint" to ""
+            "entrypoint" to "",
+        )
+        val venvVars = listOf(
+            // Per virtualenv docs, all activators do is prepend the
+            // environment's bin/ directory to PATH. Per inspection of an
+            // installed 'activate' script, a  VIRTUAL_ENV variable is also
+            // set, and PYTHONHOME is unset if it exists.
+            "VIRTUAL_ENV=${config.pythonVenv}",
+            "PATH=${config.pythonVenv}/bin:\$PATH",
+            "PYTHONHOME=",
         )
         return PosixCommandLine(config.dockerExe).also {
+            if (config.localWorkDir.isNotBlank()) {
+                it.setWorkDirectory(config.localWorkDir)
+            }
             when (config.hostType) {
                 DockerHostType.CONTAINER -> {
                     it.addParameter("exec")
+                    it.addParameters(config.hostName, *pythonCommandString(config.pythonVenv))
                 }
                 DockerHostType.IMAGE -> {
                     it.addParameter("run")
-                    it.addOptions(runOptions)
+                    it.addOptions(runOptions + mapOf(
+                        "env" to if (config.pythonVenv.isNotBlank()) venvVars else null,
+                    ))
+                    it.addParameters(config.hostName, *pythonCommandString())
                 }
                 DockerHostType.SERVICE -> {
                     it.addParameter("compose")
                     it.addOptions(mapOf(
-                        "file" to config.dockerCompose.ifBlank { null }  // null to omit
+                        "file" to config.dockerCompose.ifBlank { null },  // null to omit
                     ))
                     it.addParameter("run")
-                    it.addOptions(runOptions)
+                    it.addOptions(runOptions + mapOf(
+                        "env" to if (config.pythonVenv.isNotBlank()) venvVars else null,
+                    ))
+                    it.addParameters(config.hostName, *pythonCommandString())
                 }
-            }
-            it.addParameters(config.hostName, *pythonCommandString())
-            if (config.localWorkDir.isNotBlank()) {
-                it.setWorkDirectory(config.localWorkDir)
             }
         }
     }
@@ -187,18 +202,29 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
      *
      * @return: Python command string
      */
-    private fun pythonCommandString(): Array<String> {
+    private fun pythonCommandString(venv: String = ""): Array<String> {
         val options = if (config.pythonOpts.isBlank()) {
             emptyList()
         } else {
             config.pythonOpts.split("\\s+".toRegex())
         }
-        val command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
+        var command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
             if (config.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
             addParameter(config.targetName)
             addParameters(CommandLine.split(config.targetArgs))
+        }
+        if (venv.isNotBlank()) {
+            // Activate the virtuelenv before running Python. Shell operators
+            // cannot be used as CommandLine parameters, so wrap the commands
+            // in a subshell invocation. ONLY VALID FOR POSIX CONTAINERS.
+            // TODO: Use environment variables instead of activate script.
+            val subcommand = sequenceOf(
+                PosixCommandLine(".","${venv}/bin/activate"),
+                command,
+            ).map { it.commandLineString }.joinToString(" && ")
+            command = PosixCommandLine("sh", "-c", subcommand)
         }
         return CommandLine.split(command.commandLineString).toTypedArray()
     }

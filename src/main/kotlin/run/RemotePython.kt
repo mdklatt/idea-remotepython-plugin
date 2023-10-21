@@ -19,7 +19,6 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import dev.mdklatt.idea.common.exec.CommandLine
 import dev.mdklatt.idea.common.exec.PosixCommandLine
 import dev.mdklatt.idea.common.map.findFirstKey
 import org.jdom.Element
