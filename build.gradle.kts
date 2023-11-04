@@ -9,8 +9,8 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 
 plugins {
-    kotlin("jvm") version("1.8.20")
-    id("org.jetbrains.intellij") version("1.11.0")
+    kotlin("jvm") version("1.9.20")
+    id("org.jetbrains.intellij") version("1.16.0")
     id("org.jetbrains.changelog") version("2.0.0")
 }
 
@@ -45,7 +45,7 @@ dependencies {
     testImplementation(kotlin("test"))
 
     // JUnit3 is required for running IDEA platform tests.
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
+    testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
 }
 
@@ -53,12 +53,12 @@ dependencies {
 tasks {
 
     wrapper {
-        gradleVersion = "7.5.1"
+        gradleVersion = "8.4"
     }
 
     withType<KotlinCompile> {
         kotlinOptions {
-            jvmTarget = "11"  // requride since 2020.3
+            jvmTarget = "17"
         }
     }
 
