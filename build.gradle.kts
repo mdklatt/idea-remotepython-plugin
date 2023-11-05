@@ -41,7 +41,7 @@ repositories {
 
 
 dependencies {
-    implementation("com.github.mdklatt:idea-common:v0.1.0.post0")  // uses JitPack
+    implementation("com.github.mdklatt:idea-common:v0.2.0")  // uses JitPack  TODO: v0.2.0
     testImplementation(kotlin("test"))
 
     // JUnit3 is required for running IDEA platform tests.

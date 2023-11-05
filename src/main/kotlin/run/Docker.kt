@@ -213,20 +213,17 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
                 addParameter("-m")
             }
             addParameter(config.targetName)
-            addParameters(CommandLine.split(config.targetArgs))
+            addParameters(CommandLine.splitArguments(config.targetArgs))
         }
         if (venv.isNotBlank()) {
             // Activate the virtuelenv before running Python. Shell operators
             // cannot be used as CommandLine parameters, so wrap the commands
             // in a subshell invocation. ONLY VALID FOR POSIX CONTAINERS.
             // TODO: Use environment variables instead of activate script.
-            val subcommand = sequenceOf(
-                PosixCommandLine(".","${venv}/bin/activate"),
-                command,
-            ).map { it.commandLineString }.joinToString(" && ")
-            command = PosixCommandLine("sh", "-c", subcommand)
+            val activate = PosixCommandLine(".", "${venv}/bin/activate")
+            command = PosixCommandLine.andCommands(activate, command)
         }
-        return CommandLine.split(command.commandLineString).toTypedArray()
+        return CommandLine.splitArguments(command.commandLineString).toTypedArray()
     }
 }
 

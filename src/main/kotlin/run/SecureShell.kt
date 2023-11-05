@@ -177,7 +177,7 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
         // specifically one compatible with OpenSSH, whose API is used here.
         return PosixCommandLine(config.sshExe).also {
             if (config.sshOpts.isNotBlank()) {
-                it.addParameters(CommandLine.split(config.sshOpts))
+                it.addParameters(CommandLine.splitArguments(config.sshOpts))
             }
             var host = config.hostName
             if (config.hostUser.isNotBlank()) {
