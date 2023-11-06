@@ -226,7 +226,7 @@ internal class DockerStateTest : BasePlatformTestCase() {
      */
     fun testGetCommandContainer() {
         val command = state(DockerHostType.CONTAINER).getCommand()
-        val str = "docker exec ubuntu sh -c \". venv/bin/activate && ${pythonCommand}\""
+        val str = "docker exec ubuntu sh -c \"export VIRTUAL_ENV=venv && export PATH=venv/bin:\$PATH && export PYTHONHOME= && ${pythonCommand}\""
         assertEquals(str, command.commandLineString)
     }
 }

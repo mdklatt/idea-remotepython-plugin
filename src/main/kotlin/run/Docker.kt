@@ -173,7 +173,7 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
             when (config.hostType) {
                 DockerHostType.CONTAINER -> {
                     it.addParameter("exec")
-                    it.addParameters(config.hostName, *pythonCommandString(config.pythonVenv))
+                    it.addParameters(config.hostName, *pythonCommandString(venvVars))
                 }
                 DockerHostType.IMAGE -> {
                     it.addParameter("run")
@@ -200,9 +200,10 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
     /**
      * Generate the remote Python command.
      *
+     * @param venvVars: virtualenv environment variables
      * @return: Python command string
      */
-    private fun pythonCommandString(venv: String = ""): Array<String> {
+    private fun pythonCommandString(venvVars: List<String>? = null): Array<String> {
         val options = if (config.pythonOpts.isBlank()) {
             emptyList()
         } else {
@@ -215,13 +216,13 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
             addParameter(config.targetName)
             addParameters(CommandLine.splitArguments(config.targetArgs))
         }
-        if (venv.isNotBlank()) {
-            // Activate the virtuelenv before running Python. Shell operators
-            // cannot be used as CommandLine parameters, so wrap the commands
-            // in a subshell invocation. ONLY VALID FOR POSIX CONTAINERS.
-            // TODO: Use environment variables instead of activate script.
-            val activate = PosixCommandLine(".", "${venv}/bin/activate")
-            command = PosixCommandLine.andCommands(activate, command)
+        if (venvVars != null) {
+            // Set environment variables directly inside the container rather
+            // than via Docker.
+            val exportVars = venvVars.map {
+                PosixCommandLine("export", it)
+            }.toTypedArray()
+            command = PosixCommandLine.andCommands(*exportVars, command)
         }
         return CommandLine.splitArguments(command.commandLineString).toTypedArray()
     }
