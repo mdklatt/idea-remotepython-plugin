@@ -170,7 +170,8 @@ class VagrantState internal constructor(environment: ExecutionEnvironment) :
             }
             it.addParameter(config.targetName)
         })
-        return joinCommands(commands.asSequence())
+        val command = PosixCommandLine.andCommands(commands.asSequence())
+        return command.parametersList.last ?: throw IndexOutOfBoundsException("invalid command")
     }
 }
 
