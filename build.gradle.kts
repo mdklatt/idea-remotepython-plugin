@@ -41,7 +41,8 @@ repositories {
 
 
 dependencies {
-    implementation("com.github.mdklatt:idea-common:v0.2.0")  // uses JitPack  TODO: v0.2.0
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
+    implementation("com.github.mdklatt:idea-common:v0.2.0")  // uses JitPack
     testImplementation(kotlin("test"))
 
     // JUnit3 is required for running IDEA platform tests.
@@ -54,12 +55,6 @@ tasks {
 
     wrapper {
         gradleVersion = "8.4"
-    }
-
-    withType<KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "17"
-        }
     }
 
     patchPluginXml {

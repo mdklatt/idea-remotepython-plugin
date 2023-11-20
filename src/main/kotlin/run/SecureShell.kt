@@ -234,7 +234,6 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
             commands.add(PosixCommandLine("cd", config.pythonWorkDir))
         }
         if (config.pythonVenv.isNotBlank()) {
-            // TODO: Make this OS-independent
             val activator = "${config.pythonVenv}/bin/activate"
             commands.add(PosixCommandLine(".", activator))
         }
@@ -249,7 +248,8 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
             }
             it.addParameter(config.targetName)
         })
-        return joinCommands(commands.asSequence())
+        val command = PosixCommandLine.andCommands(commands.asSequence())
+        return command.parametersList.last ?: throw IndexOutOfBoundsException("invalid command")
     }
 
     companion object {

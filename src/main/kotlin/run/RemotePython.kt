@@ -392,7 +392,4 @@ abstract class RemotePythonState internal constructor(environment: ExecutionEnvi
      * @return command
      */
     internal abstract fun getCommand(): PosixCommandLine
-
-    protected fun joinCommands(commands: Sequence<PosixCommandLine>) =
-        commands.map { it.commandLineString }.joinToString(" && ")
-    }
+}
