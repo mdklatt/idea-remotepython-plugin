@@ -4,10 +4,12 @@
 package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.RunManager
+import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
+import org.testcontainers.containers.GenericContainer
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -169,16 +171,21 @@ internal class DockerEditorTest : BasePlatformTestCase() {
  */
 internal class DockerStateTest : BasePlatformTestCase() {
 
-    private lateinit var dockerRunArgs: String
-    private lateinit var pythonCommand: String
+    private lateinit var runConfig: RunnerAndConfigurationSettings
+    private lateinit var config: DockerRunConfiguration
 
     /**
      * Per-test initialization.
      */
     override fun setUp() {
         super.setUp()
-        dockerRunArgs = "run --rm --entrypoint \"\" --env VIRTUAL_ENV=venv --env PATH=venv/bin:\$PATH --env PYTHONHOME="
-        pythonCommand = "python3 -a -b -m platform"
+        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
+        runConfig = RunManager.getInstance(project).createConfiguration("Docker Test", factory)
+        config = (runConfig.configuration as DockerRunConfiguration).also {
+            it.targetName = "cowsay"
+            it.targetArgs = "-t hello"
+            it.pythonVenv = "/opt/venv"
+        }
     }
 
     /**
@@ -187,46 +194,66 @@ internal class DockerStateTest : BasePlatformTestCase() {
      * @param hostType: Docker host type
      * @return state object
      */
-    private fun state(hostType: DockerHostType): DockerState {
-        val factory = DockerConfigurationFactory(RemotePythonConfigurationType())
-        val runConfig = RunManager.getInstance(project).createConfiguration("Docker Test", factory)
-        (runConfig.configuration as DockerRunConfiguration).also {
-            it.hostType = hostType
-            it.hostName = "ubuntu"
-            it.targetType = TargetType.MODULE
-            it.targetName = "platform"
-            it.pythonOpts = "-a -b"
-            it.pythonVenv = "venv"
-        }
+    private fun state(): DockerState {
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
         return DockerState(environment)
     }
 
     /**
-     * Test the getCommand() method for a Docker image.
+     * Test execution for a Docker container.
      */
-    fun testGetCommandImage() {
-        val command = state(DockerHostType.IMAGE).getCommand()
-        val str = "docker ${dockerRunArgs} ubuntu ${pythonCommand}"
-        assertEquals(str, command.commandLineString)
+    fun testExecContainer() {
+        val container = GenericContainer("dev.mdklatt/idea-remote-plugin/openssh-server-python:latest")
+        container.start()
+        config.let {
+            it.hostType = DockerHostType.CONTAINER
+            it.hostName = container.containerName
+            it.targetType = TargetType.MODULE
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
     }
 
     /**
-     * Test the getCommand() method for a Docker Compose service.
+     * Test execution for a Docker image.
      */
-    fun testGetCommandCompose() {
-        val command = state(DockerHostType.SERVICE).getCommand()
-        val str = "docker compose ${dockerRunArgs} ubuntu ${pythonCommand}"
-        assertEquals(str, command.commandLineString)
+    fun testExecImage() {
+        config.let {
+            it.hostType = DockerHostType.IMAGE
+            it.hostName = "dev.mdklatt/idea-remote-plugin/openssh-server-python:latest"
+            it.targetType = TargetType.MODULE
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
     }
 
     /**
-     * Test the getCommand() method for a Docker container.
+     * Test execution for a Docker Compose service.
      */
-    fun testGetCommandContainer() {
-        val command = state(DockerHostType.CONTAINER).getCommand()
-        val str = "docker exec ubuntu sh -c \"export VIRTUAL_ENV=venv && export PATH=venv/bin:\$PATH && export PYTHONHOME= && ${pythonCommand}\""
-        assertEquals(str, command.commandLineString)
+    fun testExecService() {
+        config.let {
+            it.hostType = DockerHostType.SERVICE
+            it.hostName = "remote_python"
+            it.targetType = TargetType.MODULE
+            it.dockerCompose = "src/test/resources/docker-compose.yml"
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
     }
 }

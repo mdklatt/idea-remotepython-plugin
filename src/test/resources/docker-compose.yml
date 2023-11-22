@@ -1,0 +1,4 @@
+version: "3.7"
+services:
+  remote_python:
+    image: "dev.mdklatt/idea-remote-plugin/openssh-server-python:latest"

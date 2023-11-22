@@ -3,7 +3,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.changelog.markdownToHTML
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 fun properties(key: String) = project.findProperty(key).toString()
 
@@ -48,6 +47,11 @@ dependencies {
     // JUnit3 is required for running IDEA platform tests.
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine")
+
+    implementation(platform("org.testcontainers:testcontainers-bom:1.19.3"))
+    testImplementation("org.testcontainers:testcontainers:1.19.3")
+    testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    //testImplementation("org.testcontainers")
 }
 
 
