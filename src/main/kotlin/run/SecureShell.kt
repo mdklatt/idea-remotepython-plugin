@@ -233,22 +233,27 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
         if (config.pythonWorkDir.isNotBlank()) {
             commands.add(PosixCommandLine("cd", config.pythonWorkDir))
         }
-        if (config.pythonVenv.isNotBlank()) {
-            val activator = "${config.pythonVenv}/bin/activate"
-            commands.add(PosixCommandLine(".", activator))
-        }
         val options = if (config.pythonOpts.isBlank()) {
             emptyList()
         } else {
             config.pythonOpts.split("\\s+".toRegex())
         }
-        commands.add(PosixCommandLine(config.pythonExe, options.asSequence()).also {
-             if (config.targetType == TargetType.MODULE) {
+        val pythonCommand = PosixCommandLine(config.pythonExe, options.asSequence()).also {
+            if (config.targetType == TargetType.MODULE) {
                 it.addParameter("-m")
             }
             it.addParameter(config.targetName)
             it.addParameters(CommandLine.splitArguments(config.targetArgs))
-        })
+            if (config.pythonVenv.isNotBlank()) {
+                it.withPythonVenv(config.pythonVenv)
+            }
+        }
+        pythonCommand.environment.entries.forEach {
+            // Environment variables have to be set in the remote shell via
+            // export.
+            commands.add(PosixCommandLine("export", "${it.key}=${it.value}"))
+        }
+        commands.add(pythonCommand)
         val command = PosixCommandLine.andCommands(commands.asSequence())
         return command.commandLineString
     }
@@ -342,7 +347,6 @@ class SecureShellEditor internal constructor() :
                 expandableTextField().bindText(::sshOpts)
             }
             row("Local working directory") {
-                // TODO: Is this necessary for SSH?
                 textFieldWithBrowseButton("Local Working Directory",
                     fileChooserDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor(),
                 ).bindText(::localWorkDir)
