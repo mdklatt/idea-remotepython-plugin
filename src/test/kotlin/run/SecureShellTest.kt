@@ -7,8 +7,11 @@ import com.intellij.execution.RunManager
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import java.nio.file.attribute.PosixFilePermission
 import kotlin.test.assertContentEquals
 import org.jdom.Element
+import org.testcontainers.containers.GenericContainer
+import kotlin.io.path.*
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -200,34 +203,56 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
  * Unit tests for the SecureShellState class.
  */
 internal class SecureShellStateTest : BasePlatformTestCase() {
-
-    private lateinit var state: SecureShellState
-
     /**
-     * Per-test initialization.
+     * Test execution.
      */
-    override fun setUp() {
-        super.setUp()
+    fun testExec() {
+        val image = "dev.mdklatt/idea-remote-plugin/openssh-server-python:latest"
+        val privateKey = Path("src/test/resources/test_ed25519").also {
+            it.setPosixFilePermissions(setOf(
+                // Make sure permissions are correct or SSH will reject the key
+                // files. Need to do this at runtime because permissions may not be
+                // correct when project is cloned.
+                // TODO: What about Windows?
+                PosixFilePermission.OWNER_READ,
+                PosixFilePermission.OWNER_WRITE
+            ))
+        }
+        val publicKey = Path("${privateKey}.pub")
+        val user = "junit"
+        val container = GenericContainer(image).also {
+            it.withExposedPorts(2222)  // container ports
+            it.withEnv(mutableMapOf(
+                "PUID" to "1000",
+                "PGID" to "1000",
+                "PUBLIC_KEY" to publicKey.toFile().readText(),
+                "USER_NAME" to user,
+            ))
+        }
+        container.start()
         val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
         val runConfig = RunManager.getInstance(project).createConfiguration("SecureShell Test", factory)
-        (runConfig.configuration as SecureShellRunConfiguration).also {
-            it.hostName = "example.com"
-            it.hostUser = "jdoe"
-            it.targetType = TargetType.MODULE
-            it.targetName = "platform"
-            it.pythonOpts = "-a -b"
-            it.pythonVenv = "venv"
+        val sshOpts = listOf(
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
+            "-o", "IdentityFile=${privateKey}",
+            "-p", container.firstMappedPort.toString()
+        )
+        (runConfig.configuration as SecureShellRunConfiguration).let {
+            it.hostName = "${user}@localhost"
+            it.sshOpts = sshOpts.joinToString(" ")
+            it.targetName = "cowsay"
+            it.targetArgs = "-t hello"
+            it.pythonVenv = "/opt/venv"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
-        state = SecureShellState(environment)
-    }
-
-    /**
-     * Test the getCommand() method.
-     */
-    fun testGetCommand() {
-        val command = "ssh jdoe@example.com \". venv/bin/activate && python3 -a -b -m platform\""
-        assertEquals(command, state.getCommand().commandLineString)
+        SecureShellState(environment).let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
     }
 }
