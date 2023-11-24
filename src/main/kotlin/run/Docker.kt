@@ -152,20 +152,13 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
      * @return Docker command
      */
     override fun getCommand(): PosixCommandLine {
-        val runOptions = mapOf(
+        val dockerRunOpts = mapOf<String, Any?>(
             "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
             "rm" to true,
             "entrypoint" to "",
         )
-        val venvVars = listOf(
-            // Per virtualenv docs, all activators do is prepend the
-            // environment's bin/ directory to PATH. Per inspection of an
-            // installed 'activate' script, a  VIRTUAL_ENV variable is also
-            // set, and PYTHONHOME is unset if it exists.
-            "VIRTUAL_ENV=${config.pythonVenv}",
-            "PATH=${config.pythonVenv}/bin:\$PATH",
-            "PYTHONHOME=",
-        )
+        val python = pythonCommand()
+        val envVars = python.environment.entries.map { "${it.key}=${it.value}" }
         return PosixCommandLine(config.dockerExe).also {
             if (config.localWorkDir.isNotBlank()) {
                 it.setWorkDirectory(config.localWorkDir)
@@ -173,14 +166,21 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
             when (config.hostType) {
                 DockerHostType.CONTAINER -> {
                     it.addParameter("exec")
-                    it.addParameters(config.hostName, *pythonCommandString(venvVars))
+                    val commands = envVars.map {
+                        env -> PosixCommandLine("export", env)
+                    }.asSequence()
+                    val joined = PosixCommandLine.andCommands(commands)
+                    val params = CommandLine.splitArguments(joined.commandLineString)
+                    it.addParameters(config.hostName, *params.toTypedArray())
                 }
                 DockerHostType.IMAGE -> {
                     it.addParameter("run")
-                    it.addOptions(runOptions + mapOf(
-                        "env" to if (config.pythonVenv.isNotBlank()) venvVars else null,
+                    it.addOptions(dockerRunOpts)
+                    it.addOptions(mapOf(
+                        "env" to envVars.ifEmpty { null },
                     ))
-                    it.addParameters(config.hostName, *pythonCommandString())
+                    val params = CommandLine.splitArguments(python.commandLineString)
+                    it.addParameters(config.hostName, *params.toTypedArray())
                 }
                 DockerHostType.SERVICE -> {
                     it.addParameter("compose")
@@ -188,10 +188,12 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
                         "file" to config.dockerCompose.ifBlank { null },  // null to omit
                     ))
                     it.addParameter("run")
-                    it.addOptions(runOptions + mapOf(
-                        "env" to if (config.pythonVenv.isNotBlank()) venvVars else null,
+                    it.addOptions(dockerRunOpts)
+                    it.addOptions(mapOf(
+                        "env" to envVars.ifEmpty { null },
                     ))
-                    it.addParameters(config.hostName, *pythonCommandString())
+                    val params = CommandLine.splitArguments(python.commandLineString)
+                    it.addParameters(config.hostName, *params.toTypedArray())
                 }
             }
         }
@@ -200,31 +202,25 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
     /**
      * Generate the remote Python command.
      *
-     * @param venvVars: virtualenv environment variables
      * @return: Python command string
      */
-    private fun pythonCommandString(venvVars: List<String>? = null): Array<String> {
+    private fun pythonCommand(): PosixCommandLine {
         val options = if (config.pythonOpts.isBlank()) {
             emptyList()
         } else {
             config.pythonOpts.split("\\s+".toRegex())
         }
-        var command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
+        val command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
             if (config.targetType == TargetType.MODULE) {
                 addParameter("-m")
             }
             addParameter(config.targetName)
             addParameters(CommandLine.splitArguments(config.targetArgs))
         }
-        if (venvVars != null) {
-            // Set environment variables directly inside the container rather
-            // than via Docker.
-            val exportVars = venvVars.map {
-                PosixCommandLine("export", it)
-            }.toTypedArray()
-            command = PosixCommandLine.andCommands(*exportVars, command)
+        if (config.pythonVenv.isNotBlank()) {
+            command.withPythonVenv(config.pythonVenv)
         }
-        return CommandLine.splitArguments(command.commandLineString).toTypedArray()
+        return command
     }
 }
 
@@ -251,6 +247,7 @@ class DockerEditor internal constructor() :
     private var dockerCompose = ""
     private var dockerOpts = ""
     private var localWorkDir = ""
+
 
     /**
      * Reset UI component with local executor options from configuration.
