@@ -247,9 +247,10 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
                 it.addParameter("-m")
             }
             it.addParameter(config.targetName)
+            it.addParameters(CommandLine.splitArguments(config.targetArgs))
         })
         val command = PosixCommandLine.andCommands(commands.asSequence())
-        return command.parametersList.last ?: throw IndexOutOfBoundsException("invalid command")
+        return command.commandLineString
     }
 
     companion object {
