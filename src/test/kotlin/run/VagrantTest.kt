@@ -178,8 +178,9 @@ internal class VagrantStateTest : BasePlatformTestCase() {
         (runConfig.configuration as VagrantRunConfiguration).also {
             it.hostName = "box"
             it.targetType = TargetType.MODULE
-            it.targetName = "platform"
-            it.pythonOpts = "-a -b"
+            it.targetName = "cowsay"
+            it.targetArgs = "-t hello"
+            it.pythonOpts = "-b"
             it.pythonVenv = "venv"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
@@ -191,7 +192,7 @@ internal class VagrantStateTest : BasePlatformTestCase() {
      * Test the getCommand() method.
      */
     fun testGetCommand() {
-        val command = "vagrant ssh --command \". venv/bin/activate && python3 -a -b -m platform\" box"
+        val command = "vagrant ssh --command \"sh -c \\\"export PATH=venv/bin:\$PATH && export PYTHONHOME= && export VIRTUAL_ENV=venv && python3 -b -m cowsay -t hello\\\"\" box"
         assertEquals(command, state.getCommand().commandLineString)
     }
 }

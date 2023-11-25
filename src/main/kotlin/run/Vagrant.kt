@@ -133,7 +133,7 @@ class VagrantState internal constructor(environment: ExecutionEnvironment) :
      */
     override fun getCommand(): PosixCommandLine {
         val options = mutableMapOf<String, Any?>(
-            "command" to pythonCommandString()
+            "command" to pythonCommand().commandLineString
         )
         return PosixCommandLine(config.vagrantExe, sequenceOf("ssh")).also {
             it.addOptions(options)
@@ -149,29 +149,34 @@ class VagrantState internal constructor(environment: ExecutionEnvironment) :
      *
      * @return: Python command string
      */
-    private fun pythonCommandString(): String {
+    private fun pythonCommand(): PosixCommandLine {
         val commands = mutableListOf<PosixCommandLine>()
         if (config.pythonWorkDir.isNotBlank()) {
             commands.add(PosixCommandLine("cd", config.pythonWorkDir))
-        }
-        if (config.pythonVenv.isNotBlank()) {
-            // TODO: Make this OS-independent
-            val activator = "${config.pythonVenv}/bin/activate"
-            commands.add(PosixCommandLine(".", activator))
         }
         val options = if (config.pythonOpts.isBlank()) {
             emptyList()
         } else {
             config.pythonOpts.split("\\s+".toRegex())
         }
-        commands.add(PosixCommandLine(config.pythonExe, options.asSequence()).also {
+        val pythonCommand = PosixCommandLine(config.pythonExe, options.asSequence()).also {
             if (config.targetType == TargetType.MODULE) {
                 it.addParameter("-m")
             }
             it.addParameter(config.targetName)
-        })
+            it.addParameters(CommandLine.splitArguments(config.targetArgs))
+            if (config.pythonVenv.isNotBlank()) {
+                it.withPythonVenv(config.pythonVenv)
+            }
+        }
+        pythonCommand.environment.entries.forEach {
+            // Environment variables have to be set in the remote shell via
+            // export.
+            commands.add(PosixCommandLine("export", "${it.key}=${it.value}"))
+        }
+        commands.add(pythonCommand)
         val command = PosixCommandLine.andCommands(commands.asSequence())
-        return command.parametersList.last ?: throw IndexOutOfBoundsException("invalid command")
+        return command
     }
 }
 
