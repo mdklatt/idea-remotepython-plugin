@@ -10,6 +10,7 @@ import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
 import org.testcontainers.containers.GenericContainer
+import org.testcontainers.images.builder.ImageFromDockerfile
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -169,7 +170,7 @@ internal class DockerEditorTest : BasePlatformTestCase() {
 /**
  * Unit tests for the DockerState class.
  */
-internal class DockerStateTest : BasePlatformTestCase() {
+internal class DockerStateTest : RemotePythonStateTest() {
 
     private lateinit var runConfig: RunnerAndConfigurationSettings
     private lateinit var config: DockerRunConfiguration
@@ -204,7 +205,7 @@ internal class DockerStateTest : BasePlatformTestCase() {
      * Test execution for a Docker container.
      */
     fun testExecContainer() {
-        val container = GenericContainer("dev.mdklatt/idea-remote-plugin/openssh-server-python:latest")
+        val container = GenericContainer(pythonImage)
         container.start()
         config.let {
             it.hostType = DockerHostType.CONTAINER

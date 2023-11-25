@@ -11,6 +11,7 @@ import java.nio.file.attribute.PosixFilePermission
 import kotlin.test.assertContentEquals
 import org.jdom.Element
 import org.testcontainers.containers.GenericContainer
+import org.testcontainers.images.builder.ImageFromDockerfile
 import kotlin.io.path.*
 
 
@@ -202,12 +203,11 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
 /**
  * Unit tests for the SecureShellState class.
  */
-internal class SecureShellStateTest : BasePlatformTestCase() {
+internal class SecureShellStateTest : RemotePythonStateTest() {
     /**
      * Test execution.
      */
     fun testExec() {
-        val image = "dev.mdklatt/idea-remote-plugin/openssh-server-python:latest"
         val privateKey = Path("src/test/resources/test_ed25519").also {
             it.setPosixFilePermissions(setOf(
                 // Make sure permissions are correct or SSH will reject the key
@@ -220,7 +220,7 @@ internal class SecureShellStateTest : BasePlatformTestCase() {
         }
         val publicKey = Path("${privateKey}.pub")
         val user = "junit"
-        val container = GenericContainer(image).also {
+        val container = GenericContainer(pythonImage).also {
             it.withExposedPorts(2222)  // container ports
             it.withEnv(mutableMapOf(
                 "PUID" to "1000",
