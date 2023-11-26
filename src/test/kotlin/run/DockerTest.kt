@@ -10,6 +10,8 @@ import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
 import org.testcontainers.containers.GenericContainer
+import kotlin.io.path.createTempFile
+import kotlin.io.path.pathString
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -184,15 +186,13 @@ internal class DockerStateTest : RemotePythonStateTest() {
         config = (runConfig.configuration as DockerRunConfiguration).also {
             it.targetName = "cowsay"
             it.targetArgs = "-t hello"
-            it.pythonVenv = "/opt/venv"
             it.pythonOpts = "-b"
         }
     }
 
     /**
-     * Create a DockerState for testing.
+     * Create a DockerState instance for testing.
      *
-     * @param hostType: Docker host type
      * @return state object
      */
     private fun state(): DockerState {
@@ -205,36 +205,31 @@ internal class DockerStateTest : RemotePythonStateTest() {
      * Test execution for a Docker container.
      */
     fun testExecContainer() {
-        val container = GenericContainer(pythonImage)
-        container.start()
         config.let {
             it.hostType = DockerHostType.CONTAINER
             it.hostName = container.containerName
             it.targetType = TargetType.MODULE
-            it.pythonVenv = ""
-            it.pythonWorkDir = "/opt/venv"
             it.pythonExe = "bin/python3"
+            it.pythonWorkDir = pythonVenv
         }
         state().let {
             val env = it.environment
             val process = it.execute(env.executor, env.runner).processHandler
             process.startNotify()
             process.waitFor()
-            val str = it.getCommand().commandLineString
             assertEquals(0, process.exitCode)
         }
     }
 
     /**
-     * Test execution for a Docker container.
+     * Test execution for a Docker container within a virtualenv environment.
      */
     fun testExecContainerVenv() {
-        val container = GenericContainer(pythonImage)
-        container.start()
         config.let {
             it.hostType = DockerHostType.CONTAINER
             it.hostName = container.containerName
             it.targetType = TargetType.MODULE
+            it.pythonVenv = pythonVenv
         }
         state().let {
             val env = it.environment
@@ -251,8 +246,10 @@ internal class DockerStateTest : RemotePythonStateTest() {
     fun testExecImage() {
         config.let {
             it.hostType = DockerHostType.IMAGE
-            it.hostName = "dev.mdklatt/idea-remote-plugin/openssh-server-python:latest"
+            it.hostName = pythonImage.dockerImageName
             it.targetType = TargetType.MODULE
+            it.pythonExe = "bin/python3"
+            it.pythonWorkDir = pythonVenv
         }
         state().let {
             val env = it.environment
@@ -264,14 +261,14 @@ internal class DockerStateTest : RemotePythonStateTest() {
     }
 
     /**
-     * Test execution for a Docker Compose service.
+     * Test execution for a Docker image within a virtualenv environment.
      */
-    fun testExecService() {
+    fun testExecImageVenv() {
         config.let {
-            it.hostType = DockerHostType.SERVICE
-            it.hostName = "remote_python"
+            it.hostType = DockerHostType.IMAGE
+            it.hostName = pythonImage.dockerImageName
             it.targetType = TargetType.MODULE
-            it.dockerCompose = "src/test/resources/docker-compose.yml"
+            it.pythonVenv = pythonVenv
         }
         state().let {
             val env = it.environment
@@ -279,6 +276,67 @@ internal class DockerStateTest : RemotePythonStateTest() {
             process.startNotify()
             process.waitFor()
             assertEquals(0, process.exitCode)
+        }
+    }
+
+    /**
+     * Test execution for a Compose service.
+     */
+    fun testExecService() {
+        config.let {
+            it.hostType = DockerHostType.SERVICE
+            it.hostName = "remote_python"
+            it.targetType = TargetType.MODULE
+            it.pythonExe = "bin/python3"
+            it.pythonWorkDir = pythonVenv
+            it.dockerCompose = composeFile.pathString
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
+    }
+
+    /**
+     * Test execution for a Compose service within a virtualenv environment.
+     */
+    fun testExecServiceVenv() {
+        config.let {
+            it.hostType = DockerHostType.SERVICE
+            it.hostName = "remote_python"
+            it.targetType = TargetType.MODULE
+            it.pythonVenv = pythonVenv
+            it.dockerCompose = composeFile.pathString
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
+    }
+
+    companion object {
+
+        private val container by lazy {
+            GenericContainer(pythonImage).apply {
+                start()
+            }
+        }
+        private val composeFile = createTempFile().also {
+            // Use container.dockerImageName to ensure that image is built
+            // before it's needed here.
+            val yaml = """
+                version: "3.7"
+                services:
+                  remote_python:
+                    image: "${container.dockerImageName}"
+             """.trimIndent()
+            it.toFile().writeText(yaml)
         }
     }
 }

@@ -4,6 +4,7 @@
 package dev.mdklatt.idea.remotepython.run
 
 import com.intellij.execution.RunManager
+import com.intellij.execution.RunnerAndConfigurationSettings
 import com.intellij.execution.executors.DefaultRunExecutor
 import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -203,12 +204,79 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
  * Unit tests for the SecureShellState class.
  */
 internal class SecureShellStateTest : RemotePythonStateTest() {
+
+    private lateinit var runConfig: RunnerAndConfigurationSettings
+    private lateinit var config: SecureShellRunConfiguration
+
     /**
-     * Test execution within a virtualenv environment
+     * Per-test initialization.
+     */
+    override fun setUp() {
+        super.setUp()
+        val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
+        runConfig = RunManager.getInstance(project).createConfiguration("SecureShell Test", factory)
+        config =  (runConfig.configuration as SecureShellRunConfiguration).also {
+            it.hostName = "${user}@localhost"
+            it.sshOpts = listOf(
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "IdentityFile=${privateKey}",
+                "-p", container.firstMappedPort.toString()
+            ).joinToString(" ")
+            it.targetName = "cowsay"
+            it.targetArgs = "-t hello"
+            it.pythonOpts = "-b"
+        }
+    }
+
+    /**
+     * Create a SecureShellState instance for testing.
+     *
+     * @return state object
+     */
+    private fun state(): SecureShellState {
+        val executor = DefaultRunExecutor.getRunExecutorInstance()
+        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
+        return SecureShellState(environment)
+    }
+
+    /**
+     * Test execution.
+     */
+    fun testExec() {
+        config.let {
+            it.pythonExe = "bin/python"
+            it.pythonWorkDir = pythonVenv
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
+    }
+
+    /**
+     * Test execution within a virtualenv environment.
      */
     fun testExecVenv() {
-        // TODO test pythonWorkDir
-        val privateKey = Path("src/test/resources/test_ed25519").also {
+        config.let {
+            it.pythonVenv = "/opt/venv"
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            assertEquals(0, process.exitCode)
+        }
+    }
+
+    companion object {
+
+        private val user = "junit"
+        private val privateKey = Path("src/test/resources/test_ed25519").also {
             it.setPosixFilePermissions(setOf(
                 // Make sure permissions are correct or SSH will reject the key
                 // files. Need to do this at runtime because permissions may not be
@@ -218,42 +286,20 @@ internal class SecureShellStateTest : RemotePythonStateTest() {
                 PosixFilePermission.OWNER_WRITE
             ))
         }
-        val publicKey = Path("${privateKey}.pub")
-        val user = "junit"
-        val container = GenericContainer(pythonImage).also {
-            it.withExposedPorts(2222)  // relative to container
-            it.withEnv(mutableMapOf(
-                "PUID" to "1000",
-                "PGID" to "1000",
-                "PUBLIC_KEY" to publicKey.toFile().readText(),
-                "USER_NAME" to user,
-            ))
-        }
-        container.start()
-        val factory = SecureShellConfigurationFactory(RemotePythonConfigurationType())
-        val runConfig = RunManager.getInstance(project).createConfiguration("SecureShell Test", factory)
-        val sshOpts = listOf(
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "UserKnownHostsFile=/dev/null",
-            "-o", "IdentityFile=${privateKey}",
-            "-p", container.firstMappedPort.toString()
-        )
-        (runConfig.configuration as SecureShellRunConfiguration).let {
-            it.hostName = "${user}@localhost"
-            it.sshOpts = sshOpts.joinToString(" ")
-            it.targetName = "cowsay"
-            it.targetArgs = "-t hello"
-            it.pythonVenv = "/opt/venv"
-            it.pythonOpts = "-b"
-        }
-        val executor = DefaultRunExecutor.getRunExecutorInstance()
-        val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()
-        SecureShellState(environment).let {
-            val env = it.environment
-            val process = it.execute(env.executor, env.runner).processHandler
-            process.startNotify()
-            process.waitFor()
-            assertEquals(0, process.exitCode)
+        private val publicKey = Path("${privateKey}.pub")
+        private val container by lazy {
+            GenericContainer(pythonImage).also {
+                it.withExposedPorts(2222)  // relative to container
+                it.withEnv(
+                    mutableMapOf(
+                        "PUID" to "1000",
+                        "PGID" to "1000",
+                        "PUBLIC_KEY" to publicKey.toFile().readText(),
+                        "USER_NAME" to user,
+                    )
+                )
+                it.start()
+            }
         }
     }
 }

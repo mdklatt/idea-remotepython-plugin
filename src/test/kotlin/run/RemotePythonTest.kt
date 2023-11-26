@@ -62,17 +62,17 @@ internal class RemotePythonConfigurationTypeTest {
 internal abstract class RemotePythonStateTest: BasePlatformTestCase() {
 
     protected companion object {
-        var pythonImage = ImageFromDockerfile().apply {
-            val venv = "/opt/venv"
-            withDockerfileFromBuilder {
-                it.from("linuxserver/openssh-server:version-9.3_p2-r0")
-                it.run("apk add python3")
-                it.run("python3 -m venv $venv")
-                it.run(". ${venv}/bin/activate && python3 -m pip install cowsay")
-                it.build()
+        val pythonVenv = "/opt/venv"
+        val pythonImage by lazy {
+            ImageFromDockerfile().also {
+                it.withDockerfileFromBuilder { builder ->
+                    builder.from("linuxserver/openssh-server:version-9.3_p2-r0")
+                    builder.run("apk add python3")
+                    builder.run("python3 -m venv $pythonVenv")
+                    builder.run(". ${pythonVenv}/bin/activate && python3 -m pip install cowsay")
+                    builder.build()
+                }
             }
         }
     }
-
-
 }

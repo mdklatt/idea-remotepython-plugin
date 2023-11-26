@@ -34,8 +34,12 @@ internal class PosixCommandLineTest : BasePlatformTestCase() {
      */
     fun testWithPythonVenv() {
         val venv = "venv"
+        val environment = mapOf(
+            "VIRTUAL_ENV" to venv,
+            "PATH" to "${venv}/bin:\$PATH",
+            "PYTHONHOME" to "",
+        )
         assertTrue(command == command.withPythonVenv(venv))
-        assertEquals("${venv}/bin:\$PATH", command.environment["PATH"])
-        assertEquals(venv, command.environment["VIRTUAL_ENV"])
+        assertEquals(environment, command.environment)
     }
 }
