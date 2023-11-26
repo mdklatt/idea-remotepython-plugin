@@ -19,6 +19,7 @@ import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
+import dev.mdklatt.idea.common.exec.CommandLine
 import dev.mdklatt.idea.common.exec.PosixCommandLine
 import dev.mdklatt.idea.common.map.findFirstKey
 import org.jdom.Element
@@ -366,7 +367,7 @@ abstract class RemotePythonEditor<Options : RemotePythonOptions, Config : Remote
 abstract class RemotePythonState internal constructor(environment: ExecutionEnvironment) :
     CommandLineState(environment) {
 
-    /**
+        /**
      * Start the process.
      *
      * @return the handler for the running process
@@ -392,4 +393,38 @@ abstract class RemotePythonState internal constructor(environment: ExecutionEnvi
      * @return command
      */
     internal abstract fun getCommand(): PosixCommandLine
+
+    companion object {
+        /**
+         * Construct Python command for a POSIX shell.
+         *
+         * @param config: run configuration settings
+         * @param exportEnv: true to export command environment as shell variables
+         * @param setWorkDir: true to set working directory via the shell
+         * @return: Python command line
+         */
+        internal fun <Options: RemotePythonOptions, Config: RemotePythonRunConfiguration<Options>>
+                posixShellPython(config: Config, setWorkDir: Boolean = true): PosixCommandLine {
+            val commands = mutableListOf<PosixCommandLine>()
+            if (setWorkDir && config.pythonWorkDir.isNotBlank()) {
+                commands.add(PosixCommandLine("cd", config.pythonWorkDir))
+            }
+            val params = if (config.pythonOpts.isNotBlank()) config.pythonOpts.split("\\s+".toRegex()) else emptyList()
+            val pythonCommand = PosixCommandLine(config.pythonExe, *params.toTypedArray()).also {
+                if (config.targetType == TargetType.MODULE) {
+                    it.addParameter("-m")
+                }
+                it.addParameter(config.targetName)
+                it.addParameters(CommandLine.splitArguments(config.targetArgs))
+                it.withPythonVenv(config.pythonVenv)
+            }
+            pythonCommand.environment.entries.forEach {
+                // Environment variables have to be set in the remote shell via
+                // export.
+                commands.add(PosixCommandLine("export", "${it.key}=${it.value}"))
+            }
+            commands.add(pythonCommand)
+            return if (commands.size > 1) PosixCommandLine.andCommands(commands.asSequence()) else pythonCommand
+        }
+    }
 }

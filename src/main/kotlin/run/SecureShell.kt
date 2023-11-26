@@ -176,14 +176,12 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
         // requires an SSH client to be installed on the local machine,
         // specifically one compatible with OpenSSH, whose API is used here.
         return PosixCommandLine(config.sshExe).also {
-            if (config.sshOpts.isNotBlank()) {
-                it.addParameters(CommandLine.splitArguments(config.sshOpts))
-            }
+            it.addParameters(CommandLine.splitArguments(config.sshOpts))
             var host = config.hostName
             if (config.hostUser.isNotBlank()) {
                 host = config.hostUser + "@" + host
             }
-            it.addParameters(host, pythonCommandString())
+            it.addParameters(host, posixShellPython(config).commandLineString)
             if (config.localWorkDir.isNotBlank()) {
                 it.setWorkDirectory(config.localWorkDir)
             }
@@ -221,41 +219,6 @@ class SecureShellState internal constructor(environment: ExecutionEnvironment) :
                 )
             }
         }
-    }
-
-    /**
-     * Generate the remote Python command.
-     *
-     * @return: Python command string
-     */
-    private fun pythonCommandString(): String {
-        val commands = mutableListOf<PosixCommandLine>()
-        if (config.pythonWorkDir.isNotBlank()) {
-            commands.add(PosixCommandLine("cd", config.pythonWorkDir))
-        }
-        val options = if (config.pythonOpts.isBlank()) {
-            emptyList()
-        } else {
-            config.pythonOpts.split("\\s+".toRegex())
-        }
-        val pythonCommand = PosixCommandLine(config.pythonExe, options.asSequence()).also {
-            if (config.targetType == TargetType.MODULE) {
-                it.addParameter("-m")
-            }
-            it.addParameter(config.targetName)
-            it.addParameters(CommandLine.splitArguments(config.targetArgs))
-            if (config.pythonVenv.isNotBlank()) {
-                it.withPythonVenv(config.pythonVenv)
-            }
-        }
-        pythonCommand.environment.entries.forEach {
-            // Environment variables have to be set in the remote shell via
-            // export.
-            commands.add(PosixCommandLine("export", "${it.key}=${it.value}"))
-        }
-        commands.add(pythonCommand)
-        val command = PosixCommandLine.andCommands(commands.asSequence())
-        return command.commandLineString
     }
 
     companion object {

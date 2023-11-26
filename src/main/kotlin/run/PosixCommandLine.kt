@@ -20,10 +20,12 @@ internal fun PosixCommandLine.withPythonVenv(venvPath: String): PosixCommandLine
     // directory to PATH. Per inspection of an installed 'activate' script, a
     // VIRTUAL_ENV variable is also set, and PYTHONHOME is unset if it exists.
     // <https://virtualenv.pypa.io/en/latest/user_guide.html#activators>
-    withEnvironment(mapOf<String, Any?>(
-        "VIRTUAL_ENV" to venvPath,
-        "PATH" to "${venvPath}/bin:\$PATH",
-        "PYTHONHOME" to "",  // unset
-    ))
+    if (venvPath.isNotBlank()) {
+        withEnvironment(mapOf<String, Any?>(
+            "VIRTUAL_ENV" to venvPath,
+            "PATH" to "${venvPath}/bin:\$PATH",
+            "PYTHONHOME" to "",  // unset
+        ))
+    }
     return this
 }

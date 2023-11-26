@@ -11,7 +11,6 @@ import java.nio.file.attribute.PosixFilePermission
 import kotlin.test.assertContentEquals
 import org.jdom.Element
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.images.builder.ImageFromDockerfile
 import kotlin.io.path.*
 
 
@@ -205,9 +204,10 @@ internal class SecureShellEditorTest : BasePlatformTestCase() {
  */
 internal class SecureShellStateTest : RemotePythonStateTest() {
     /**
-     * Test execution.
+     * Test execution within a virtualenv environment
      */
-    fun testExec() {
+    fun testExecVenv() {
+        // TODO test pythonWorkDir
         val privateKey = Path("src/test/resources/test_ed25519").also {
             it.setPosixFilePermissions(setOf(
                 // Make sure permissions are correct or SSH will reject the key
@@ -221,7 +221,7 @@ internal class SecureShellStateTest : RemotePythonStateTest() {
         val publicKey = Path("${privateKey}.pub")
         val user = "junit"
         val container = GenericContainer(pythonImage).also {
-            it.withExposedPorts(2222)  // container ports
+            it.withExposedPorts(2222)  // relative to container
             it.withEnv(mutableMapOf(
                 "PUID" to "1000",
                 "PGID" to "1000",
@@ -244,6 +244,7 @@ internal class SecureShellStateTest : RemotePythonStateTest() {
             it.targetName = "cowsay"
             it.targetArgs = "-t hello"
             it.pythonVenv = "/opt/venv"
+            it.pythonOpts = "-b"
         }
         val executor = DefaultRunExecutor.getRunExecutorInstance()
         val environment = ExecutionEnvironmentBuilder.create(executor, runConfig).build()

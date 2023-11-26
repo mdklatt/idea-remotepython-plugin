@@ -10,7 +10,6 @@ import com.intellij.execution.runners.ExecutionEnvironmentBuilder
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.jdom.Element
 import org.testcontainers.containers.GenericContainer
-import org.testcontainers.images.builder.ImageFromDockerfile
 
 
 // The IDEA platform tests use JUnit3, so method names are used to determine
@@ -186,6 +185,7 @@ internal class DockerStateTest : RemotePythonStateTest() {
             it.targetName = "cowsay"
             it.targetArgs = "-t hello"
             it.pythonVenv = "/opt/venv"
+            it.pythonOpts = "-b"
         }
     }
 
@@ -205,6 +205,30 @@ internal class DockerStateTest : RemotePythonStateTest() {
      * Test execution for a Docker container.
      */
     fun testExecContainer() {
+        val container = GenericContainer(pythonImage)
+        container.start()
+        config.let {
+            it.hostType = DockerHostType.CONTAINER
+            it.hostName = container.containerName
+            it.targetType = TargetType.MODULE
+            it.pythonVenv = ""
+            it.pythonWorkDir = "/opt/venv"
+            it.pythonExe = "bin/python3"
+        }
+        state().let {
+            val env = it.environment
+            val process = it.execute(env.executor, env.runner).processHandler
+            process.startNotify()
+            process.waitFor()
+            val str = it.getCommand().commandLineString
+            assertEquals(0, process.exitCode)
+        }
+    }
+
+    /**
+     * Test execution for a Docker container.
+     */
+    fun testExecContainerVenv() {
         val container = GenericContainer(pythonImage)
         container.start()
         config.let {

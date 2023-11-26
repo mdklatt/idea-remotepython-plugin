@@ -152,73 +152,46 @@ class DockerState internal constructor(environment: ExecutionEnvironment) :
      * @return Docker command
      */
     override fun getCommand(): PosixCommandLine {
-        val dockerRunOpts = mapOf<String, Any?>(
-            "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
+        val command = PosixCommandLine(config.dockerExe)
+        val dockerRunOpts = mutableMapOf<String, Any?>(
             "rm" to true,
             "entrypoint" to "",
         )
-        val python = pythonCommand()
-        val envVars = python.environment.entries.map { "${it.key}=${it.value}" }
-        return PosixCommandLine(config.dockerExe).also {
+        command.apply {
             if (config.localWorkDir.isNotBlank()) {
-                it.setWorkDirectory(config.localWorkDir)
+                setWorkDirectory(config.localWorkDir)
             }
             when (config.hostType) {
                 DockerHostType.CONTAINER -> {
-                    it.addParameter("exec")
-                    val commands = envVars.map {
-                        env -> PosixCommandLine("export", env)
-                    }.asSequence()
-                    val joined = PosixCommandLine.andCommands(commands)
-                    val params = CommandLine.splitArguments(joined.commandLineString)
-                    it.addParameters(config.hostName, *params.toTypedArray())
+                    addParameter("exec")
+                    addOptions(mapOf<String, Any?>(
+                        "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
+                    ))
+
                 }
                 DockerHostType.IMAGE -> {
-                    it.addParameter("run")
-                    it.addOptions(dockerRunOpts)
-                    it.addOptions(mapOf(
-                        "env" to envVars.ifEmpty { null },
+                    addParameter("run")
+                    addOptions(mapOf<String, Any?>(
+                        "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
                     ))
-                    val params = CommandLine.splitArguments(python.commandLineString)
-                    it.addParameters(config.hostName, *params.toTypedArray())
+                    addOptions(dockerRunOpts)
                 }
+
                 DockerHostType.SERVICE -> {
-                    it.addParameter("compose")
-                    it.addOptions(mapOf(
+                    addParameter("compose")
+                    addOptions(mapOf(
                         "file" to config.dockerCompose.ifBlank { null },  // null to omit
                     ))
-                    it.addParameter("run")
-                    it.addOptions(dockerRunOpts)
-                    it.addOptions(mapOf(
-                        "env" to envVars.ifEmpty { null },
+                    addParameter("run")
+                    addOptions(mapOf<String, Any?>(
+                        "workdir" to config.pythonWorkDir.ifBlank { null },  // null to omit
                     ))
-                    val params = CommandLine.splitArguments(python.commandLineString)
-                    it.addParameters(config.hostName, *params.toTypedArray())
+                    addOptions(dockerRunOpts)
                 }
             }
-        }
-    }
-
-    /**
-     * Generate the remote Python command.
-     *
-     * @return: Python command string
-     */
-    private fun pythonCommand(): PosixCommandLine {
-        val options = if (config.pythonOpts.isBlank()) {
-            emptyList()
-        } else {
-            config.pythonOpts.split("\\s+".toRegex())
-        }
-        val command = PosixCommandLine(config.pythonExe, options.asSequence()).apply {
-            if (config.targetType == TargetType.MODULE) {
-                addParameter("-m")
-            }
-            addParameter(config.targetName)
-            addParameters(CommandLine.splitArguments(config.targetArgs))
-        }
-        if (config.pythonVenv.isNotBlank()) {
-            command.withPythonVenv(config.pythonVenv)
+            val python = posixShellPython(config, setWorkDir = false)
+            val params = CommandLine.splitArguments(python.commandLineString)
+            addParameters(config.hostName, *params.toTypedArray())
         }
         return command
     }
