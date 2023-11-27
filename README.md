@@ -57,7 +57,7 @@ include a binary distribution named `idea-remotepython-plugin-<version>.zip` tha
 can be [installed from disk][12].
 
 
-[1]: https://img.shields.io/static/v1?label=IDEA&message=2022.1%2B&color=informational
+[1]: https://img.shields.io/static/v1?label=IDEA&message=2023.1%2B&color=informational
 [2]: https://img.shields.io/github/v/release/mdklatt/idea-remotepython-plugin?sort=semver
 [3]: https://github.com/mdklatt/idea-remotepython-plugin/releases
 [4]: https://github.com/mdklatt/idea-remotepython-plugin/actions/workflows/test.yml/badge.svg
